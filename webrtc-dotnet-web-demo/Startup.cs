@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Net.WebSockets;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -23,7 +23,7 @@ namespace WonderMediaProductions.WebRtc
 
         public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory, IApplicationLifetime lifetime)
         {
-            loggerFactory.AddConsole(LogLevel.Debug);
+            // loggerFactory.AddConsole(LogLevel.Debug);
 
             var logger = loggerFactory.CreateLogger("WD");
 

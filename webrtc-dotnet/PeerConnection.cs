@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -148,6 +148,12 @@ namespace WonderMediaProductions.WebRtc
         internal int AddVideoTrack(VideoEncoderOptions options)
         {
             var id = Native.AddVideoTrack(_nativePtr, options.Label, options.MinBitsPerSecond, options.MaxBitsPerSecond, options.MaxFramesPerSecond);
+            return Native.Check(id);
+        }
+
+        internal int AddAudioTrack(AudioEncoderOptions options)
+        {
+            var id = Native.AddAudioTrack(_nativePtr, options.Label);
             return Native.Check(id);
         }
 

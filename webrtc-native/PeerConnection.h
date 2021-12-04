@@ -31,6 +31,8 @@ public:
     int AddVideoTrack(const std::string& label, int min_bps, int max_bps, int max_fps);
     bool SendVideoFrame(int video_track_id, const uint8_t* pixels, int stride, int width, int height, VideoFrameFormat format);
 
+    int AddAudioTrack(const std::string& label);
+
     bool CreateOffer();
     bool CreateAnswer();
     bool SetAudioControl(bool is_mute, bool is_record);
@@ -124,11 +126,16 @@ private:
     };
 
     int last_video_track_id_ = 0;
+    int last_audio_track_id_ = 0;
 
     // TODO: Also use an identifier of a data-channel.
     std::map<std::string, std::unique_ptr<DataChannelEntry>> data_channels_;
 
     std::map<int, rtc::scoped_refptr<webrtc::VideoTrackInterface>> video_tracks_;
+    std::map<int, rtc::scoped_refptr<webrtc::AudioTrackInterface>> audio_tracks_;
+    std::map<int, rtc::scoped_refptr<webrtc::MediaStreamInterface>> media_streams_;
+
+
 
 #ifdef HAS_LOCAL_VIDEO_OBSERVER
     std::unique_ptr<VideoObserver> local_video_observer_;

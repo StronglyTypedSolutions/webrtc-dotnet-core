@@ -2,6 +2,13 @@
 
 let retryHandle: number = NaN;
 
+const canvas = document.getElementById("audio") as HTMLCanvasElement;
+canvas.width = 512;
+canvas.height = 256;
+
+const canvasContext = canvas.getContext("2d");
+const audioContext = new AudioContext();
+
 function isPlaying(media: HTMLMediaElement): boolean {
     return media.currentTime > 0 && !media.paused && !media.ended && media.readyState > 2;
 }
@@ -10,6 +17,48 @@ function isPlaying(media: HTMLMediaElement): boolean {
 function removeBandwidthRestriction(sdp: string) {
     // TODO: This this is actually work? Test!
     return sdp.replace(/b=AS:.*\r\n/, '').replace(/b=TIAS:.*\r\n/, '');
+}
+
+function createVolumeMeter(stream: MediaStream) {
+    const mediaStreamSource = audioContext.createMediaStreamSource(stream);
+
+    const processor = audioContext.createScriptProcessor(canvas.width , 1, 1);
+
+    mediaStreamSource.connect(audioContext.destination);
+    mediaStreamSource.connect(processor);
+    processor.connect(audioContext.destination);
+
+    processor.onaudioprocess = e => {
+        canvasContext.clearRect(0, 0, canvas.width, canvas.height);
+        canvasContext.strokeStyle = "red";
+        canvasContext.fillStyle = "red";
+
+        canvasContext.lineWidth = 3;
+        canvasContext.beginPath();
+
+        const inputData = e.inputBuffer.getChannelData(0);
+        const inputDataLength = inputData.length;
+
+        let total = 0;
+
+        for (let i = 0; i < inputDataLength; i++) {
+            const sample = inputData[i++];
+            const y = sample * 128 + 128;
+            if (i === 0) {
+                canvasContext.moveTo(i, y);
+            } else {
+                canvasContext.lineTo(i, y);
+
+            }
+            total += Math.abs(sample);
+        }
+
+        canvasContext.stroke();
+
+        const rms = Math.sqrt(total / inputDataLength);
+
+        canvasContext.fillText(rms.toString(), 0, 20);
+    };
 }
 
 function main() {
@@ -40,7 +89,7 @@ function main() {
         return url;
     }
 
-    var pc_config: RTCConfiguration = {
+    const pc_config: RTCConfiguration = {
         iceServers: [
             { urls: "stun:stun.l.google.com:19302" }
         ]
@@ -101,6 +150,9 @@ function main() {
             if (e.button === 0) {
                 log(`🛈 Playing video`);
                 await video.play();
+                log(`🛈 Playing audio`);
+                await audioContext.resume();
+                log(`🛈 Player ready!`);
                 playElem.style.visibility = "hidden";
             }
         } catch (err) {
@@ -134,10 +186,17 @@ function main() {
         };
 
         pc.ontrack = ({ transceiver }) => {
-            log(`✔ received track`);
-            let track = transceiver.receiver.track;
+            const track = transceiver.receiver.track;
 
-            video.srcObject = new MediaStream([track]);
+            log(`✔ received ${track.kind} track`);
+
+            const stream = new MediaStream([track]);
+
+            if (track.kind === "video") {
+                video.srcObject = stream;
+            } else {
+                createVolumeMeter(stream);
+            }
 
             track.onunmute = () => {
                 log(`✔ track unmuted`);
@@ -170,7 +229,7 @@ function main() {
                     {
                         await pc.setRemoteDescription(payload);
                         log(`✔ setRemoteDescription`);
-                        let { sdp, type } = await pc.createAnswer({ offerToReceiveVideo: true });
+                        let { sdp, type } = await pc.createAnswer({ offerToReceiveVideo: true, offerToReceiveAudio: true });
                         log(`✔ createAnswer`);
                         sdp = removeBandwidthRestriction(sdp);
                         await pc.setLocalDescription({ sdp, type });

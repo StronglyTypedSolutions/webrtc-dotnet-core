@@ -345,6 +345,11 @@ extern "C"
         return connection->AddVideoTrack(label, min_bps, max_bps, max_fps);
     }
 
+    WEBRTC_PLUGIN_API int AddAudioTrack(PeerConnection* connection, const char* label)
+    {
+        return connection->AddAudioTrack(label);
+    }
+
     WEBRTC_PLUGIN_API bool AddDataChannel(PeerConnection* connection, const char* label, bool is_ordered, bool is_reliable)
     {
         return connection->AddDataChannel(label, is_ordered, is_reliable);

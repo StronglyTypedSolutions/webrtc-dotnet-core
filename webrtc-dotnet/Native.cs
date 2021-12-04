@@ -114,6 +114,9 @@ namespace WonderMediaProductions.WebRtc
         internal static extern int AddVideoTrack(IntPtr connection, string label, int minBitsPerSecond, int maxBitsPerSeconds, int maxFramesPerSecond);
 
         [DllImport(DllPath, CallingConvention = CallingConvention.Cdecl)]
+        internal static extern int AddAudioTrack(IntPtr connection, string label);
+
+        [DllImport(DllPath, CallingConvention = CallingConvention.Cdecl)]
         internal static extern bool AddDataChannel(IntPtr connection, string label, bool isOrdered, bool isReliable);
 
         [DllImport(DllPath, CallingConvention = CallingConvention.Cdecl)]

@@ -183,6 +183,7 @@ namespace WonderMediaProductions.WebRtc
             }))
             using (pc.LocalIceCandidateStream.Subscribe(ice => ws.SendJsonAsync("ice", ice, cancellation)))
             using (pc.LocalSessionDescriptionStream.Subscribe(sd => ws.SendJsonAsync("sdp", sd, cancellation)))
+            using (var audioTrack = new AudioTrack(pc, new AudioEncoderOptions()))
             using (var videoTrack = new ObservableVideoTrack(pc,
                 VideoEncoderOptions.OptimizedFor(VideoFrameWidth, VideoFrameHeight, VideoFrameRate, VideoMotion.Medium, VideoMotion.High)))
             {

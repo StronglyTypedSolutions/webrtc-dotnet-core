@@ -39,6 +39,7 @@ namespace WonderMediaProductions.WebRtc
 
         protected override void OnDispose(bool isDisposing)
         {
+            // TODO: Remove video track!
             if (isDisposing)
             {
                 PeerConnection.LocalVideoFrameProcessed -= OnLocalVideoFrameProcessed;

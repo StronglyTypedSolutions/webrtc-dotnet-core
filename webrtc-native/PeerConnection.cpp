@@ -129,7 +129,6 @@ bool PeerConnection::CreateAnswer()
 
 bool PeerConnection::CreateTransceivers() const
 {
-    // This code doesn't seem to be required to receive video anymore.
     if (can_receive_audio_)
     {
         webrtc::RtpTransceiverInit init;
@@ -307,34 +306,29 @@ bool PeerConnection::SetAudioControl(bool is_mute, bool is_record)
 
 bool PeerConnection::SetAudioControl()
 {
-    return false;
+    //if (!remote_stream_)
+    //    return false;
 
-    // TODO: Implement!
-#if 0
-    if (!remote_stream_)
-        return false;
+    //webrtc::AudioTrackVector tracks = remote_stream_->GetAudioTracks();
+    //if (tracks.empty())
+    //    return false;
 
-    webrtc::AudioTrackVector tracks = remote_stream_->GetAudioTracks();
-    if (tracks.empty())
-        return false;
+    //webrtc::AudioTrackInterface* audio_track = tracks[0];
+    //std::string id = audio_track->id();
+    //if (is_record_audio_)
+    //    audio_track->AddSink(this);
+    //else
+    //    audio_track->RemoveSink(this);
 
-    webrtc::AudioTrackInterface* audio_track = tracks[0];
-    std::string id = audio_track->id();
-    if (is_record_audio_)
-        audio_track->AddSink(this);
-    else
-        audio_track->RemoveSink(this);
-
-    for (auto& track : tracks)
-    {
-        if (is_mute_audio_)
-            track->set_enabled(false);
-        else
-            track->set_enabled(true);
-    }
+    //for (auto& track : tracks)
+    //{
+    //    if (is_mute_audio_)
+    //        track->set_enabled(false);
+    //    else
+    //        track->set_enabled(true);
+    //}
 
     return true;
-#endif
 }
 
 void PeerConnection::OnSignalingChange(webrtc::PeerConnectionInterface::SignalingState new_state)
@@ -379,9 +373,9 @@ void PeerConnection::OnTrack(rtc::scoped_refptr<webrtc::RtpTransceiverInterface>
             }
             else
             {
-            video_track->AddOrUpdateSink(remote_video_observer_.get(), rtc::VideoSinkWants());
+              video_track->AddOrUpdateSink(remote_video_observer_.get(), rtc::VideoSinkWants());
+            }
         }
-    }
     }
 
     SetAudioControl();
@@ -404,6 +398,52 @@ void PeerConnection::OnIceGatheringChange(webrtc::PeerConnectionInterface::IceGa
 {
     RTC_LOG(INFO) << __FUNCTION__ << new_state;
     // TODO: Implement
+}
+
+int PeerConnection::AddAudioTrack(const std::string& label)
+{
+    for (auto&& pair : audio_tracks_)
+    {
+        if (pair.second->id() == label)
+        {
+            RTC_LOG(LS_ERROR) << "Audio track '" << label << "' already exists!";
+            return 0;
+        }
+    }
+
+    auto stream = factory_->CreateLocalMediaStream("microphone");
+    if (!stream)
+        return 0;
+
+    cricket::AudioOptions audioOptions;
+    auto audio_track_source = factory_->CreateAudioSource(audioOptions);
+    if (!audio_track_source)
+        return 0;
+
+    auto audio_track = factory_->CreateAudioTrack(label, audio_track_source);
+    if (!audio_track)
+        return 0;
+
+    auto add_track_to_stream_result = stream->AddTrack(audio_track);
+    if (!add_track_to_stream_result)
+        return 0;
+
+    audio_track->set_enabled(true);
+
+    webrtc::RtpTransceiverInit init_params;
+    init_params.direction = webrtc::RtpTransceiverDirection::kSendOnly;
+
+    auto audio_transceiver_result = peer_connection_->AddTransceiver(audio_track, init_params);
+    if (!audio_transceiver_result.ok())
+        return 0;
+
+    const auto id = ++last_audio_track_id_;
+    audio_tracks_.emplace(id, audio_track);
+
+    media_streams_.emplace(id, stream);
+
+    return id;
+
 }
 
 int PeerConnection::AddVideoTrack(const std::string& label, int min_bps, int max_bps, int max_fps)
