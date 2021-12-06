@@ -124,6 +124,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="CoreAudioDevice.h" />
+    <ClInclude Include="CoreAudioModule.h" />
     <ClInclude Include="DummySetSessionDescriptionObserver.h" />
     <ClInclude Include="filesystem.h" />
     <ClInclude Include="InjectableVideoTrackSource.h" />
@@ -142,6 +143,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CoreAudioDevice.cpp" />
+    <ClCompile Include="CoreAudioModule.cpp" />
     <ClCompile Include="DummySetSessionDescriptionObserver.cpp" />
     <ClCompile Include="InjectableVideoTrackSource.cpp" />
     <ClCompile Include="main.cpp" />
