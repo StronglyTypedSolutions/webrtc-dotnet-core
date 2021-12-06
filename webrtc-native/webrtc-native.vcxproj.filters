@@ -55,6 +55,9 @@
     <ClInclude Include="CoreAudioDevice.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="CoreAudioModule.h">
+      <Filter>src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="DummySetSessionDescriptionObserver.cpp">
@@ -97,6 +100,9 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="CoreAudioDevice.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="CoreAudioModule.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
