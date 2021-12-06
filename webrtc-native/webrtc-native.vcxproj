@@ -123,6 +123,7 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="CoreAudioDevice.h" />
     <ClInclude Include="DummySetSessionDescriptionObserver.h" />
     <ClInclude Include="filesystem.h" />
     <ClInclude Include="InjectableVideoTrackSource.h" />
@@ -140,6 +141,7 @@
     <ClInclude Include="VideoObserver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CoreAudioDevice.cpp" />
     <ClCompile Include="DummySetSessionDescriptionObserver.cpp" />
     <ClCompile Include="InjectableVideoTrackSource.cpp" />
     <ClCompile Include="main.cpp" />

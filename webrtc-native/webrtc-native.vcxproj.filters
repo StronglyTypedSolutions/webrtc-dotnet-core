@@ -52,6 +52,9 @@
     <ClInclude Include="main.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="CoreAudioDevice.h">
+      <Filter>src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="DummySetSessionDescriptionObserver.cpp">
@@ -91,6 +94,9 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="CoreAudioDevice.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
