@@ -73,9 +73,9 @@ function main() {
     // Clear log
     logElem.innerText = "";
 
-    function log(text: string) {
+    function log(text: string, ...extra: any[]) {
 
-        console.log(text);
+        console.log(text, ...extra);
 
         const line = document.createElement("pre");
         line.innerText = text;
@@ -188,7 +188,7 @@ function main() {
         pc.ontrack = ({ transceiver }) => {
             const track = transceiver.receiver.track;
 
-            log(`✔ received ${track.kind} track`);
+            log(`✔ received ${track.kind} track #${track.id} '${track.label}'`, track);
 
             const stream = new MediaStream([track]);
 
@@ -199,15 +199,15 @@ function main() {
             }
 
             track.onunmute = () => {
-                log(`✔ track unmuted`);
+                log(`✔ ${track.kind} track #${track.id} '${track.label}' unmuted`, track);
             }
 
             track.onended = () => {
-                log(`✘ track ended`);
+                log(`✘ ${track.kind} track #${track.id} '${track.label}' ended`, track);
             }
 
             track.onmute = () => {
-                log(`✘ track muted`);
+                log(`✘ ${track.kind} track #${track.id} '${track.label}' muted`, track);
             };
         }
     }
@@ -238,7 +238,7 @@ function main() {
                     }
             }
         } catch (err) {
-            log(`✘ ${err}`);
+            log(`✘ ${err}`, err);
         }
     }
 }
