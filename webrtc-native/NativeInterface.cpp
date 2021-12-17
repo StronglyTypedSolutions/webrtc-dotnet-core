@@ -25,7 +25,7 @@ namespace
 
     LogSink g_log_sink = nullptr;
 
-    rtc::LoggingSeverity g_minimum_logging_severity = rtc::LS_INFO;
+    rtc::LoggingSeverity g_minimum_logging_severity = rtc::LS_WARNING;
 
     rtc::CriticalSection g_lock;
 

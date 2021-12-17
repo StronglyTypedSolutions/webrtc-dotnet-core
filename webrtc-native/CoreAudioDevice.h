@@ -140,16 +140,8 @@ namespace webrtc {
         static DWORD WINAPI WSAPICaptureThread(LPVOID context);
         DWORD DoCaptureThread();
 
-        static DWORD WINAPI WSAPICaptureThreadPollDMO(LPVOID context);
-        DWORD DoCaptureThreadPollDMO();
-
-        static DWORD WINAPI WSAPIRenderThread(LPVOID context);
-        DWORD DoRenderThread();
-
         void _Lock();
         void _UnLock();
-
-        int SetDMOProperties();
 
         int SetBoolProperty(IPropertyStore* ptrPS,
             REFPROPERTYKEY key,
@@ -157,38 +149,36 @@ namespace webrtc {
 
         int SetVtI4Property(IPropertyStore* ptrPS, REFPROPERTYKEY key, LONG value);
 
-        int32_t _EnumerateEndpointDevicesAll(EDataFlow dataFlow) const;
+        int32_t _EnumerateEndpointDevicesAll() const;
         void _TraceCOMError(HRESULT hr) const;
 
-        int32_t _RefreshDeviceList(EDataFlow dir);
-        int16_t _DeviceListCount(EDataFlow dir);
-        int32_t _GetDefaultDeviceName(EDataFlow dir,
+        int32_t _RefreshDeviceList();
+        int16_t _DeviceListCount();
+        int32_t _GetDefaultDeviceName(
             ERole role,
             LPWSTR szBuffer,
             int bufferLen);
-        int32_t _GetListDeviceName(EDataFlow dir,
+        int32_t _GetListDeviceName(
             int index,
             LPWSTR szBuffer,
             int bufferLen);
         int32_t _GetDeviceName(IMMDevice* pDevice, LPWSTR pszBuffer, int bufferLen);
-        int32_t _GetListDeviceID(EDataFlow dir,
+        int32_t _GetListDeviceID(
             int index,
             LPWSTR szBuffer,
             int bufferLen);
-        int32_t _GetDefaultDeviceID(EDataFlow dir,
+        int32_t _GetDefaultDeviceID(
             ERole role,
             LPWSTR szBuffer,
             int bufferLen);
-        int32_t _GetDefaultDeviceIndex(EDataFlow dir, ERole role, int* index);
+        int32_t _GetDefaultDeviceIndex( ERole role, int* index);
         int32_t _GetDeviceID(IMMDevice* pDevice, LPWSTR pszBuffer, int bufferLen);
-        int32_t _GetDefaultDevice(EDataFlow dir, ERole role, IMMDevice** ppDevice);
-        int32_t _GetListDevice(EDataFlow dir, int index, IMMDevice** ppDevice);
+        int32_t _GetDefaultDevice( ERole role, IMMDevice** ppDevice);
+        int32_t _GetListDevice( int index, IMMDevice** ppDevice);
 
         // Converts from wide-char to UTF-8 if UNICODE is defined.
         // Does nothing if UNICODE is undefined.
         char* WideToUTF8(const TCHAR* src) const;
-
-        int32_t InitRecordingDMO();
 
         ScopedCOMInitializer _comInit;
         AudioDeviceBuffer* _ptrAudioBuffer;
@@ -196,28 +186,17 @@ namespace webrtc {
         rtc::CriticalSection _volumeMutex;
 
         IMMDeviceEnumerator* _ptrEnumerator;
-        IMMDeviceCollection* _ptrRenderCollection;
-        IMMDeviceCollection* _ptrCaptureCollection;
-        IMMDevice* _ptrDeviceOut;
+        IMMDeviceCollection* _ptrLoopbackCollection;
         IMMDevice* _ptrDeviceIn;
 
-        IAudioClient* _ptrClientOut;
         IAudioClient* _ptrClientIn;
-        IAudioRenderClient* _ptrRenderClient;
-        IAudioCaptureClient* _ptrCaptureClient;
+        IAudioCaptureClient* _ptrLoopbackClient;
         IAudioEndpointVolume* _ptrCaptureVolume;
         ISimpleAudioVolume* _ptrRenderSimpleVolume;
 
-        // DirectX Media Object (DMO) for the built-in AEC.
-        rtc::scoped_refptr<IMediaObject> _dmo;
-        rtc::scoped_refptr<IMediaBuffer> _mediaBuffer;
-        bool _builtInAecEnabled;
-
-        HANDLE _hRenderSamplesReadyEvent;
-        HANDLE _hPlayThread;
-        HANDLE _hRenderStartedEvent;
-        HANDLE _hShutdownRenderEvent;
-
+        // // DirectX Media Object (DMO) for the built-in AEC.
+        // rtc::scoped_refptr<IMediaObject> _dmo;
+        // rtc::scoped_refptr<IMediaBuffer> _mediaBuffer;
         HANDLE _hCaptureSamplesReadyEvent;
         HANDLE _hRecThread;
         HANDLE _hCaptureStartedEvent;
@@ -225,15 +204,14 @@ namespace webrtc {
 
         HANDLE _hMmTask;
 
-        UINT _playAudioFrameSize;
-        uint32_t _playSampleRate;
-        uint32_t _devicePlaySampleRate;
-        uint32_t _playBlockSize;
-        uint32_t _devicePlayBlockSize;
-        uint32_t _playChannels;
-        uint32_t _sndCardPlayDelay;
+        // UINT _playAudioFrameSize;
+        // uint32_t _playSampleRate;
+        // uint32_t _devicePlaySampleRate;
+        // uint32_t _playBlockSize;
+        // uint32_t _devicePlayBlockSize;
+        // uint32_t _playChannels;
         uint32_t _sndCardRecDelay;
-        UINT64 _writtenSamples;
+        // UINT64 _writtenSamples;
         UINT64 _readSamples;
 
         UINT _recAudioFrameSize;
@@ -242,7 +220,6 @@ namespace webrtc {
         uint32_t _recChannels;
 
         uint16_t _recChannelsPrioList[3];
-        uint16_t _playChannelsPrioList[2];
 
         LARGE_INTEGER _perfCounterFreq;
         double _perfCounterFactor;
@@ -250,18 +227,14 @@ namespace webrtc {
     private:
         bool _initialized;
         bool _recording;
-        bool _playing;
         bool _recIsInitialized;
         bool _playIsInitialized;
         bool _speakerIsInitialized;
         bool _microphoneIsInitialized;
 
         bool _usingInputDeviceIndex;
-        bool _usingOutputDeviceIndex;
         AudioDeviceModule::WindowsDeviceType _inputDevice;
-        AudioDeviceModule::WindowsDeviceType _outputDevice;
         uint16_t _inputDeviceIndex;
-        uint16_t _outputDeviceIndex;
 
         mutable char _str[512];
     };

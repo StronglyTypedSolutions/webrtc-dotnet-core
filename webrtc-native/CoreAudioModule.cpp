@@ -639,32 +639,36 @@ namespace webrtc {
     bool CoreAudioModule::BuiltInAGCIsAvailable() const {
         RTC_LOG(INFO) << __FUNCTION__;
         CHECKinitialized__BOOL();
-        bool isAvailable = audio_device_->BuiltInAGCIsAvailable();
-        RTC_LOG(INFO) << "output: " << isAvailable;
-        return isAvailable;
+        return true;
+        // bool isAvailable = audio_device_->BuiltInAGCIsAvailable();
+        // RTC_LOG(INFO) << "output: " << isAvailable;
+        // return isAvailable;
     }
 
     int32_t CoreAudioModule::EnableBuiltInAGC(bool enable) {
         RTC_LOG(INFO) << __FUNCTION__ << "(" << enable << ")";
         CHECKinitialized_();
-        int32_t ok = audio_device_->EnableBuiltInAGC(enable);
-        RTC_LOG(INFO) << "output: " << ok;
-        return ok;
+        return 0;
+        // int32_t ok = audio_device_->EnableBuiltInAGC(enable);
+        // RTC_LOG(INFO) << "output: " << ok;
+        // return ok;
     }
 
     bool CoreAudioModule::BuiltInNSIsAvailable() const {
         RTC_LOG(INFO) << __FUNCTION__;
         CHECKinitialized__BOOL();
-        bool isAvailable = audio_device_->BuiltInNSIsAvailable();
-        RTC_LOG(INFO) << "output: " << isAvailable;
-        return isAvailable;
+        return true;
+        // bool isAvailable = audio_device_->BuiltInNSIsAvailable();
+        // RTC_LOG(INFO) << "output: " << isAvailable;
+        // return isAvailable;
     }
 
     int32_t CoreAudioModule::EnableBuiltInNS(bool enable) {
         RTC_LOG(INFO) << __FUNCTION__ << "(" << enable << ")";
         CHECKinitialized_();
-        int32_t ok = audio_device_->EnableBuiltInNS(enable);
-        RTC_LOG(INFO) << "output: " << ok;
-        return ok;
+        return 0;
+        // int32_t ok = audio_device_->EnableBuiltInNS(enable);
+        // RTC_LOG(INFO) << "output: " << ok;
+        // return ok;
     }
 }  // namespace webrtc
