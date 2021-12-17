@@ -16,6 +16,8 @@ namespace webrtc {
         int32_t CreateCoreAudioDevice();
         int32_t AttachAudioBuffer();
 
+        static rtc::scoped_refptr<AudioDeviceModule> Create();
+
         CoreAudioModule();
         ~CoreAudioModule() override;
 

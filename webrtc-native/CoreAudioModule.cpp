@@ -25,7 +25,7 @@
 
 namespace webrtc {
 
-    rtc::scoped_refptr<AudioDeviceModule> AudioDeviceModule::Create() {
+    rtc::scoped_refptr<AudioDeviceModule> CoreAudioModule::Create() {
         RTC_LOG(INFO) << __FUNCTION__;
 
         rtc::scoped_refptr<CoreAudioModule> audioDevice(
@@ -52,8 +52,8 @@ namespace webrtc {
     int32_t CoreAudioModule::CreateCoreAudioDevice() {
         RTC_LOG(INFO) << __FUNCTION__;
         RTC_LOG(INFO) << "Attempting to use the Windows Core Audio device...";
-        if (AudioDeviceWindowsCore::CoreAudioIsSupported()) {
-            audio_device_.reset(new AudioDeviceWindowsCore());
+        if (CoreAudioDevice::CoreAudioIsSupported()) {
+            audio_device_.reset(new CoreAudioDevice());
             RTC_LOG(INFO) << "Windows Core Audio device is created";
         }
 

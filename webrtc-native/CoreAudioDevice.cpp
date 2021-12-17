@@ -259,10 +259,10 @@ namespace webrtc {
             (void**)&pIMMD);
 
         if (FAILED(hr)) {
-            RTC_LOG(LS_ERROR) << "AudioDeviceWindowsCore::CoreAudioIsSupported()"
+            RTC_LOG(LS_ERROR) << "CoreAudioDevice::CoreAudioIsSupported()"
                 << " Failed to create the required COM object (hr=" << hr
                 << ")";
-            RTC_LOG(LS_VERBOSE) << "AudioDeviceWindowsCore::CoreAudioIsSupported()"
+            RTC_LOG(LS_VERBOSE) << "CoreAudioDevice::CoreAudioIsSupported()"
                 << " CoCreateInstance(MMDeviceEnumerator) failed (hr="
                 << hr << ")";
 
@@ -290,7 +290,7 @@ namespace webrtc {
         else {
             MMDeviceIsAvailable = true;
             RTC_LOG(LS_VERBOSE)
-                << "AudioDeviceWindowsCore::CoreAudioIsSupported()"
+                << "CoreAudioDevice::CoreAudioIsSupported()"
                 << " CoCreateInstance(MMDeviceEnumerator) succeeded (hr=" << hr << ")";
             SAFE_RELEASE(pIMMD);
         }
@@ -327,7 +327,7 @@ namespace webrtc {
                 }
                 if (ok) {
                     RTC_LOG(LS_WARNING)
-                        << "AudioDeviceWindowsCore::CoreAudioIsSupported()"
+                        << "CoreAudioDevice::CoreAudioIsSupported()"
                         << " Failed to use Core Audio Recording for device id=" << i;
                 }
             }
@@ -343,7 +343,7 @@ namespace webrtc {
                 }
                 if (ok) {
                     RTC_LOG(LS_WARNING)
-                        << "AudioDeviceWindowsCore::CoreAudioIsSupported()"
+                        << "CoreAudioDevice::CoreAudioIsSupported()"
                         << " Failed to use Core Audio Playout for device id=" << i;
                 }
             }
@@ -373,7 +373,7 @@ namespace webrtc {
     // ============================================================================
 
     // ----------------------------------------------------------------------------
-    //  AudioDeviceWindowsCore() - ctor
+    //  CoreAudioDevice() - ctor
     // ----------------------------------------------------------------------------
 
     CoreAudioDevice::CoreAudioDevice()
@@ -439,7 +439,7 @@ namespace webrtc {
             if (_avrtLibrary) {
                 // Handle is valid (should only happen if OS larger than vista & win7).
                 // Try to get the function addresses.
-                RTC_LOG(LS_VERBOSE) << "AudioDeviceWindowsCore::AudioDeviceWindowsCore()"
+                RTC_LOG(LS_VERBOSE) << "CoreAudioDevice::CoreAudioDevice()"
                     << " The Avrt DLL module is now loaded";
 
                 _PAvRevertMmThreadCharacteristics =
@@ -454,13 +454,13 @@ namespace webrtc {
                 if (_PAvRevertMmThreadCharacteristics &&
                     _PAvSetMmThreadCharacteristicsA && _PAvSetMmThreadPriority) {
                     RTC_LOG(LS_VERBOSE)
-                        << "AudioDeviceWindowsCore::AudioDeviceWindowsCore()"
+                        << "CoreAudioDevice::CoreAudioDevice()"
                         << " AvRevertMmThreadCharacteristics() is OK";
                     RTC_LOG(LS_VERBOSE)
-                        << "AudioDeviceWindowsCore::AudioDeviceWindowsCore()"
+                        << "CoreAudioDevice::CoreAudioDevice()"
                         << " AvSetMmThreadCharacteristicsA() is OK";
                     RTC_LOG(LS_VERBOSE)
-                        << "AudioDeviceWindowsCore::AudioDeviceWindowsCore()"
+                        << "CoreAudioDevice::CoreAudioDevice()"
                         << " AvSetMmThreadPriority() is OK";
                     _winSupportAvrt = true;
                 }
@@ -522,7 +522,7 @@ namespace webrtc {
     }
 
     // ----------------------------------------------------------------------------
-    //  AudioDeviceWindowsCore() - dtor
+    //  CoreAudioDevice() - dtor
     // ----------------------------------------------------------------------------
 
     CoreAudioDevice::~CoreAudioDevice() {
@@ -570,11 +570,11 @@ namespace webrtc {
             BOOL freeOK = FreeLibrary(_avrtLibrary);
             if (!freeOK) {
                 RTC_LOG(LS_WARNING)
-                    << "AudioDeviceWindowsCore::~AudioDeviceWindowsCore()"
+                    << "CoreAudioDevice::~CoreAudioDevice()"
                     << " failed to free the loaded Avrt DLL module correctly";
             }
             else {
-                RTC_LOG(LS_WARNING) << "AudioDeviceWindowsCore::~AudioDeviceWindowsCore()"
+                RTC_LOG(LS_WARNING) << "CoreAudioDevice::~CoreAudioDevice()"
                     << " the Avrt DLL module is now unloaded";
             }
         }
@@ -1300,7 +1300,7 @@ namespace webrtc {
     // ----------------------------------------------------------------------------
 
     int32_t CoreAudioDevice::SetMicrophoneVolume(uint32_t volume) {
-        RTC_LOG(LS_VERBOSE) << "AudioDeviceWindowsCore::SetMicrophoneVolume(volume="
+        RTC_LOG(LS_VERBOSE) << "CoreAudioDevice::SetMicrophoneVolume(volume="
             << volume << ")";
 
         {
