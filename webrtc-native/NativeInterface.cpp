@@ -1,4 +1,6 @@
 #include "pch.h"
+
+#include "CoreAudioModule.h"
 #include "PeerConnection.h"
 #include "NvEncoderH264.h"
 #include "EncoderFactory.h"
@@ -102,7 +104,16 @@ namespace
                 video_decoder_factory = std::make_unique<webrtc::InternalDecoderFactory>();
             }
 
-            const std::nullptr_t default_adm = nullptr;
+            // https://groups.google.com/g/discuss-webrtc/c/vCfnjG-wxoc
+            auto adm = g_worker_thread->Invoke<rtc::scoped_refptr<webrtc::AudioDeviceModule>>(RTC_FROM_HERE,
+                []()
+                {
+                    // TODO: Make multi-platform!
+                    return webrtc::CoreAudioModule::Create();
+                });
+
+            adm->AddRef();
+
             const std::nullptr_t audio_mixer = nullptr;
             const std::nullptr_t audio_processing = nullptr;
 
@@ -110,7 +121,7 @@ namespace
                 g_worker_thread.get(),
                 g_worker_thread.get(),
                 g_signaling_thread.get(),
-                default_adm,
+                adm,
                 audio_encoder_factory,
                 audio_decoder_factory,
                 move(video_encoder_factory),
@@ -120,6 +131,11 @@ namespace
 
             g_peer_connection_factory = std::move(factory);
             g_peer_connection_factory->AddRef();
+
+            // HACK: Need for some reason to workaround this error:
+            // RTC INFO: (audio_device_buffer.cc:115): webrtc::AudioDeviceBuffer::StartRecording
+            // RTC FAIL : (audio_device_core_win.cc:2379) : Playout must be started before recording when using the built - in AEC
+            adm->EnableBuiltInAEC(false);
         }
         else if (g_auto_shutdown)
         {

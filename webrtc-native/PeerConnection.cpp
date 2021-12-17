@@ -412,10 +412,14 @@ int PeerConnection::AddAudioTrack(const std::string& label)
     }
 
     auto stream = factory_->CreateLocalMediaStream("microphone");
+
     if (!stream)
         return 0;
 
     cricket::AudioOptions audioOptions;
+    // HACK: Needed for sending audio only, otherwise 
+    // RTC FAIL: (audio_device_core_win.cc:2379): Playout must be started before recording when using the built-in AEC
+    audioOptions.echo_cancellation = false;
     auto audio_track_source = factory_->CreateAudioSource(audioOptions);
     if (!audio_track_source)
         return 0;

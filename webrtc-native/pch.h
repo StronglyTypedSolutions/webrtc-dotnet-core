@@ -52,6 +52,8 @@
 #include "modules/video_coding/utility/simulcast_utility.h"
 #include <modules/video_coding/include/video_error_codes.h>
 
+#include "modules/audio_device/include/audio_device_factory.h"
+
 #include "pc/video_track_source.h"
 
 #include "absl/memory/memory.h"
@@ -78,6 +80,7 @@
 #include "common_video/h264/h264_common.h"
 #include "modules/video_coding/include/video_codec_interface.h"
 #include "media/base/h264_profile_level_id.h"
+
 
 #ifdef _WIN32
 #   include <Windows.h>

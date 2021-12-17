@@ -19,16 +19,43 @@ function removeBandwidthRestriction(sdp: string) {
     return sdp.replace(/b=AS:.*\r\n/, '').replace(/b=TIAS:.*\r\n/, '');
 }
 
+const MediaRecorder = (window as any).MediaRecorder;
+
 function createVolumeMeter(stream: MediaStream) {
-    const mediaStreamSource = audioContext.createMediaStreamSource(stream);
 
-    const processor = audioContext.createScriptProcessor(canvas.width , 1, 1);
+    const context = audioContext;
+    const track = context.createMediaStreamSource(stream);
+    const gainNode = context.createGain();
+    const analyser = context.createAnalyser();
+    analyser.fftSize = 2048;
+    track.connect(gainNode);
+    track.connect(analyser);
+    gainNode.gain.value = 0;
+    track.connect(context.destination);
+    const bufferLength = analyser.frequencyBinCount;
+    console.log(bufferLength);
+    const inputData = new Uint8Array(bufferLength);
 
-    mediaStreamSource.connect(audioContext.destination);
-    mediaStreamSource.connect(processor);
-    processor.connect(audioContext.destination);
+    //var options = {
+    //    audioBitsPerSecond: 22050,
+    //    mimeType: 'audio/webm'
+    //}
 
-    processor.onaudioprocess = e => {
+    //if (!MediaRecorder.isTypeSupported(options.mimeType)) alert(`${options.mimeType} is not supported`)!
+
+    //const recorder = new MediaRecorder(stream, options);
+
+    //recorder.ondataavailable = (packet: any) => {
+    //    console.log("MediaRecorder", packet);
+    //};
+    //recorder.onerror = (err: any) => alert(`MediaRecorder error: ${err.message}`);
+    //recorder.start();
+
+    //mediaStreamSource.connect(audioContext.destination);
+    //mediaStreamSource.connect(processor);
+    //processor.connect(audioContext.destination);
+
+    function drawAudio() {
         canvasContext.clearRect(0, 0, canvas.width, canvas.height);
         canvasContext.strokeStyle = "red";
         canvasContext.fillStyle = "red";
@@ -36,7 +63,8 @@ function createVolumeMeter(stream: MediaStream) {
         canvasContext.lineWidth = 3;
         canvasContext.beginPath();
 
-        const inputData = e.inputBuffer.getChannelData(0);
+        analyser.getByteTimeDomainData(inputData);
+
         const inputDataLength = inputData.length;
 
         let total = 0;
@@ -58,14 +86,21 @@ function createVolumeMeter(stream: MediaStream) {
         const rms = Math.sqrt(total / inputDataLength);
 
         canvasContext.fillText(rms.toString(), 0, 20);
+
+        requestAnimationFrame(drawAudio);
     };
+
+    requestAnimationFrame(drawAudio);
 }
 
 function main() {
 
     retryHandle = NaN;
 
+    const mediaStream = new MediaStream();
     const video = document.querySelector('video');
+    video.srcObject = mediaStream ;
+
     const logElem = document.getElementById('log');
     const playElem = document.getElementById('play-trigger');
     playElem.style.visibility = "hidden";
@@ -185,17 +220,17 @@ function main() {
             log(`✘ ice candidate error = ${e.errorText}#${e.errorCode}`);
         };
 
-        pc.ontrack = ({ transceiver }) => {
-            const track = transceiver.receiver.track;
+        pc.ontrack = ({ streams, track }) => {
 
-            log(`✔ received ${track.kind} track #${track.id} '${track.label}'`, track);
+            log(`✔ received ${track.kind} track #${track.id} '${track.label}'`, track, streams);
 
-            const stream = new MediaStream([track]);
+            mediaStream.addTrack(track);
 
             if (track.kind === "video") {
-                video.srcObject = stream;
+               // video.srcObject = stream;
             } else {
-                createVolumeMeter(stream);
+                //video.srcObject = stream;
+                createVolumeMeter(mediaStream);
             }
 
             track.onunmute = () => {
@@ -203,6 +238,7 @@ function main() {
             }
 
             track.onended = () => {
+                mediaStream.removeTrack(track);
                 log(`✘ ${track.kind} track #${track.id} '${track.label}' ended`, track);
             }
 
