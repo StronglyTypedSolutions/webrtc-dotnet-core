@@ -1440,7 +1440,7 @@ namespace webrtc {
         hr = _ptrClientIn->Initialize(
             AUDCLNT_SHAREMODE_SHARED,  // share Audio Engine with other applications
             AUDCLNT_STREAMFLAGS_EVENTCALLBACK |  // processing of the audio buffer by
-                                                 // the client will be event driven
+                                                 // the client will be event driven 
             AUDCLNT_STREAMFLAGS_NOPERSIST |   // volume and mute settings for an
                                              // audio session will not persist
                                              // across system restarts
@@ -1830,7 +1830,8 @@ namespace webrtc {
 
         while (keepRecording) {
             // Wait for a capture notification event or a shutdown event
-            DWORD waitResult = WaitForMultipleObjects(2, waitArray, FALSE, 500);
+            // [PV] WASAPI loopback will not output an event, so we poll instead
+            DWORD waitResult = WaitForMultipleObjects(2, waitArray, FALSE, 5);
             switch (waitResult) {
             case WAIT_OBJECT_0 + 0:  // _hShutdownCaptureEvent
                 keepRecording = false;
@@ -1838,8 +1839,9 @@ namespace webrtc {
             case WAIT_OBJECT_0 + 1:  // _hCaptureSamplesReadyEvent
                 break;
             case WAIT_TIMEOUT:  // timeout notification
-                RTC_LOG(LS_WARNING) << "capture event timed out after 0.5 seconds";
-                goto Exit;
+                break;
+                //RTC_LOG(LS_WARNING) << "capture event timed out after 0.5 seconds";
+                //goto Exit;
             default:  // unexpected error
                 RTC_LOG(LS_WARNING) << "unknown wait termination on capture side";
                 goto Exit;
@@ -1884,7 +1886,7 @@ namespace webrtc {
                     if (flags & AUDCLNT_BUFFERFLAGS_SILENT) {
                         // Treat all of the data in the packet as silence and ignore the
                         // actual data values.
-                        RTC_LOG(LS_WARNING) << "AUDCLNT_BUFFERFLAGS_SILENT";
+                        // RTC_LOG(LS_WARNING) << "AUDCLNT_BUFFERFLAGS_SILENT";
                         pData = nullptr;
                     }
 

@@ -416,10 +416,18 @@ int PeerConnection::AddAudioTrack(const std::string& label)
     if (!stream)
         return 0;
 
+    // Disable all audio processing, we are capturing as-is from the WASAPI loopback speaker
     cricket::AudioOptions audioOptions;
-    // HACK: Needed for sending audio only, otherwise 
-    // RTC FAIL: (audio_device_core_win.cc:2379): Playout must be started before recording when using the built-in AEC
-    audioOptions.echo_cancellation = false;
+    audioOptions.auto_gain_control.emplace(false);
+    audioOptions.echo_cancellation.emplace(false);
+    audioOptions.typing_detection.emplace(false);
+    audioOptions.noise_suppression.emplace(false);
+    audioOptions.highpass_filter.emplace(false);
+    audioOptions.extended_filter_aec.emplace(false);
+    audioOptions.experimental_agc.emplace(false);
+    audioOptions.experimental_ns.emplace(false);
+    audioOptions.stereo_swapping.emplace(false);
+
     auto audio_track_source = factory_->CreateAudioSource(audioOptions);
     if (!audio_track_source)
         return 0;
@@ -434,7 +442,13 @@ int PeerConnection::AddAudioTrack(const std::string& label)
 
     audio_track->set_enabled(true);
 
+    webrtc::RtpEncodingParameters init_encoding;
+    init_encoding.min_bitrate_bps = 128*1024;
+    init_encoding.max_bitrate_bps = 512*1024;
+    init_encoding.active = true;
+
     webrtc::RtpTransceiverInit init_params;
+    init_params.send_encodings = { init_encoding };
     init_params.direction = webrtc::RtpTransceiverDirection::kSendOnly;
 
     auto audio_transceiver_result = peer_connection_->AddTransceiver(audio_track, init_params);

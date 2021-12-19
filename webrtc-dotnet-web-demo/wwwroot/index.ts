@@ -8,6 +8,7 @@ canvas.height = 256;
 
 const canvasContext = canvas.getContext("2d");
 const audioContext = new AudioContext();
+audioContext.suspend();
 
 function isPlaying(media: HTMLMediaElement): boolean {
     return media.currentTime > 0 && !media.paused && !media.ended && media.readyState > 2;
@@ -19,87 +20,14 @@ function removeBandwidthRestriction(sdp: string) {
     return sdp.replace(/b=AS:.*\r\n/, '').replace(/b=TIAS:.*\r\n/, '');
 }
 
-const MediaRecorder = (window as any).MediaRecorder;
-
-function createVolumeMeter(stream: MediaStream) {
-
-    const context = audioContext;
-    const track = context.createMediaStreamSource(stream);
-    const gainNode = context.createGain();
-    const analyser = context.createAnalyser();
-    analyser.fftSize = 2048;
-    track.connect(gainNode);
-    track.connect(analyser);
-    gainNode.gain.value = 0;
-    track.connect(context.destination);
-    const bufferLength = analyser.frequencyBinCount;
-    console.log(bufferLength);
-    const inputData = new Uint8Array(bufferLength);
-
-    //var options = {
-    //    audioBitsPerSecond: 22050,
-    //    mimeType: 'audio/webm'
-    //}
-
-    //if (!MediaRecorder.isTypeSupported(options.mimeType)) alert(`${options.mimeType} is not supported`)!
-
-    //const recorder = new MediaRecorder(stream, options);
-
-    //recorder.ondataavailable = (packet: any) => {
-    //    console.log("MediaRecorder", packet);
-    //};
-    //recorder.onerror = (err: any) => alert(`MediaRecorder error: ${err.message}`);
-    //recorder.start();
-
-    //mediaStreamSource.connect(audioContext.destination);
-    //mediaStreamSource.connect(processor);
-    //processor.connect(audioContext.destination);
-
-    function drawAudio() {
-        canvasContext.clearRect(0, 0, canvas.width, canvas.height);
-        canvasContext.strokeStyle = "red";
-        canvasContext.fillStyle = "red";
-
-        canvasContext.lineWidth = 3;
-        canvasContext.beginPath();
-
-        analyser.getByteTimeDomainData(inputData);
-
-        const inputDataLength = inputData.length;
-
-        let total = 0;
-
-        for (let i = 0; i < inputDataLength; i++) {
-            const sample = inputData[i++];
-            const y = sample * 128 + 128;
-            if (i === 0) {
-                canvasContext.moveTo(i, y);
-            } else {
-                canvasContext.lineTo(i, y);
-
-            }
-            total += Math.abs(sample);
-        }
-
-        canvasContext.stroke();
-
-        const rms = Math.sqrt(total / inputDataLength);
-
-        canvasContext.fillText(rms.toString(), 0, 20);
-
-        requestAnimationFrame(drawAudio);
-    };
-
-    requestAnimationFrame(drawAudio);
-}
-
 function main() {
 
     retryHandle = NaN;
 
     const mediaStream = new MediaStream();
-    const video = document.querySelector('video');
-    video.srcObject = mediaStream ;
+
+    const videoElement = document.querySelector('video');
+    videoElement.srcObject = mediaStream ;
 
     const logElem = document.getElementById('log');
     const playElem = document.getElementById('play-trigger');
@@ -122,6 +50,51 @@ function main() {
         const port = location.port ? (":" + location.port) : "";
         const url = scheme + "://" + location.hostname + port + "/signaling";
         return url;
+    }
+
+    function startAudioSpectrumAnalyser() {
+        const source = audioContext.createMediaStreamSource(mediaStream);
+
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = canvas.width / 2;
+        source.connect(analyser);
+
+        // Make sure we don't play the audio twice by setting the volume to zero
+        const gain = audioContext.createGain();
+        gain.gain.value = 0;
+        source.connect(gain);
+
+        gain.connect(audioContext.destination);
+
+
+        const bufferLength = analyser.frequencyBinCount;
+        const inputData = new Uint8Array(bufferLength);
+
+        function drawAudio() {
+            canvasContext.clearRect(0, 0, canvas.width, canvas.height);
+            canvasContext.fillStyle = "red";
+
+            analyser.getByteTimeDomainData(inputData);
+
+            const inputDataLength = inputData.length;
+
+            const xScale = canvas.width / inputDataLength;
+            const yScale = canvas.height / 256;
+
+            for (let i = 0; i < inputDataLength; i++) {
+                const sample = inputData[i];
+                const height = sample * yScale;
+                canvasContext.fillRect(i * xScale, canvas.height - height, xScale, height);
+            }
+
+            if (mediaStream.getAudioTracks().length) {
+                requestAnimationFrame(drawAudio);
+            } else {
+                log("Stopped audio analyser");
+            }
+        };
+
+        requestAnimationFrame(drawAudio);
     }
 
     const pc_config: RTCConfiguration = {
@@ -159,34 +132,34 @@ function main() {
         setTimeout(main, 1000);
     }
 
-    video.addEventListener("readystatechange", () => log(`🛈 Video ready state = ${video.readyState}`));
+    videoElement.addEventListener("readystatechange", () => log(`🛈 Video ready state = ${videoElement.readyState}`));
 
     function sendMousePos(e: MouseEvent, kind: number) {
-        const bounds = video.getBoundingClientRect();
+        const bounds = videoElement.getBoundingClientRect();
         const x = (e.clientX - bounds.left) / bounds.width;
         const y = (e.clientY - bounds.top) / bounds.height;
         send("pos", { kind, x, y });
 
         if (kind === 2) {
-            video.onmousemove = video.onmouseup = null;
+            videoElement.onmousemove = videoElement.onmouseup = null;
         }
     }
 
-    video.onmousedown = async (e: MouseEvent) => {
+    videoElement.onmousedown = async (e: MouseEvent) => {
         if (e.button === 0) {
             sendMousePos(e, 0);
-            video.onmousemove = (e2: MouseEvent) => sendMousePos(e2, 1);
-            video.onmouseup = (e2: MouseEvent) => sendMousePos(e2, 2);
+            videoElement.onmousemove = (e2: MouseEvent) => sendMousePos(e2, 1);
+            videoElement.onmouseup = (e2: MouseEvent) => sendMousePos(e2, 2);
         }
     }
 
     playElem.onmousedown = async (e: MouseEvent) => {
         try {
             if (e.button === 0) {
-                log(`🛈 Playing video`);
-                await video.play();
-                log(`🛈 Playing audio`);
+                log(`🛈 Starting audio analyser...`);
                 await audioContext.resume();
+                log(`🛈 Playing video...`);
+                await videoElement.play();
                 log(`🛈 Player ready!`);
                 playElem.style.visibility = "hidden";
             }
@@ -195,7 +168,7 @@ function main() {
         }
     }
 
-    video.oncanplay = () => {
+    videoElement.oncanplay = () => {
         log(`🛈 Video can play`);
         playElem.style.visibility = "visible";
     };
@@ -226,11 +199,8 @@ function main() {
 
             mediaStream.addTrack(track);
 
-            if (track.kind === "video") {
-               // video.srcObject = stream;
-            } else {
-                //video.srcObject = stream;
-                createVolumeMeter(mediaStream);
+            if (track.kind === "audio") {
+                startAudioSpectrumAnalyser();
             }
 
             track.onunmute = () => {
