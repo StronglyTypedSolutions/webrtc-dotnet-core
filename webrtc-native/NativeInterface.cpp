@@ -1,7 +1,58 @@
 #include "pch.h"
+
+#include "CoreAudioModule.h"
 #include "PeerConnection.h"
 #include "NvEncoderH264.h"
 #include "EncoderFactory.h"
+
+#include "api/audio_codecs/audio_encoder_factory_template.h"
+#include "api/audio_codecs/opus/audio_encoder_opus.h"  // nogncheck
+
+// TODO: Move to other file
+class CustomAudioEncoderFactory : public webrtc::AudioEncoderFactory {
+public:
+    // Returns a prioritized list of audio codecs, to use for signaling etc.
+    std::vector<webrtc::AudioCodecSpec> GetSupportedEncoders() override {
+        std::vector<webrtc::AudioCodecSpec> result;
+        webrtc::AudioEncoderOpus::AppendSupportedEncoders(&result);
+        return result;
+    }
+
+    // Returns information about how this format would be encoded, provided it's
+    // supported. More format and format variations may be supported than those
+    // returned by GetSupportedEncoders().
+    virtual absl::optional<webrtc::AudioCodecInfo> QueryAudioEncoder(const webrtc::SdpAudioFormat& format) {
+        auto optConfig = GetConfig(format);
+        if (optConfig.has_value())
+            return webrtc::AudioEncoderOpus::QueryAudioEncoder(optConfig.value());
+
+        return absl::nullopt;
+    }
+
+    std::unique_ptr<webrtc::AudioEncoder> MakeAudioEncoder(
+        int payload_type,
+        const webrtc::SdpAudioFormat& format,
+        absl::optional<webrtc::AudioCodecPairId> codec_pair_id) override {
+        auto optConfig = GetConfig(format);
+        return optConfig.has_value()
+            ? webrtc::AudioEncoderOpus::MakeAudioEncoder(optConfig.value(), payload_type, codec_pair_id)
+            : nullptr;
+    }
+
+private:
+    absl::optional<webrtc::AudioEncoderOpusConfig> GetConfig(const webrtc::SdpAudioFormat& format) {
+        auto optConfig = webrtc::AudioEncoderOpus::SdpToConfig(format);
+        if (!optConfig.has_value())
+            return absl::nullopt;
+
+        // HACK: It seems that when format.num_channels == 2, the config will have 1 channel!
+        // Stereo is only used when format explicitly has the "stereo" parameter...
+        auto config = optConfig.value();
+        config.num_channels = format.num_channels;
+        return config;
+    }
+
+};
 
 #if defined(WEBRTC_WIN)
 #   define WEBRTC_PLUGIN_API __declspec(dllexport)
@@ -23,7 +74,7 @@ namespace
 
     LogSink g_log_sink = nullptr;
 
-    rtc::LoggingSeverity g_minimum_logging_severity = rtc::LS_INFO;
+    rtc::LoggingSeverity g_minimum_logging_severity = rtc::LS_WARNING;
 
     rtc::CriticalSection g_lock;
 
@@ -78,7 +129,7 @@ namespace
             startThread(g_worker_thread, g_use_worker_thread);
 
             // TODO: Support fake audio codec factories. Currently we do not support audio at all.
-            const auto audio_encoder_factory = webrtc::CreateBuiltinAudioEncoderFactory();
+            rtc::scoped_refptr<CustomAudioEncoderFactory> audio_encoder_factory = new rtc::RefCountedObject<CustomAudioEncoderFactory>();
             const auto audio_decoder_factory = webrtc::CreateBuiltinAudioDecoderFactory();
 
             std::unique_ptr<webrtc::VideoEncoderFactory> video_encoder_factory;
@@ -102,7 +153,16 @@ namespace
                 video_decoder_factory = std::make_unique<webrtc::InternalDecoderFactory>();
             }
 
-            const std::nullptr_t default_adm = nullptr;
+            // https://groups.google.com/g/discuss-webrtc/c/vCfnjG-wxoc
+            auto adm = g_worker_thread->Invoke<rtc::scoped_refptr<webrtc::AudioDeviceModule>>(RTC_FROM_HERE,
+                []()
+                {
+                    // TODO: Make multi-platform!
+                    return webrtc::CoreAudioModule::Create();
+                });
+
+            adm->AddRef();
+
             const std::nullptr_t audio_mixer = nullptr;
             const std::nullptr_t audio_processing = nullptr;
 
@@ -110,7 +170,7 @@ namespace
                 g_worker_thread.get(),
                 g_worker_thread.get(),
                 g_signaling_thread.get(),
-                default_adm,
+                adm,
                 audio_encoder_factory,
                 audio_decoder_factory,
                 move(video_encoder_factory),
@@ -120,6 +180,11 @@ namespace
 
             g_peer_connection_factory = std::move(factory);
             g_peer_connection_factory->AddRef();
+
+            // HACK: Need for some reason to workaround this error:
+            // RTC INFO: (audio_device_buffer.cc:115): webrtc::AudioDeviceBuffer::StartRecording
+            // RTC FAIL : (audio_device_core_win.cc:2379) : Playout must be started before recording when using the built - in AEC
+            adm->EnableBuiltInAEC(false);
         }
         else if (g_auto_shutdown)
         {
@@ -192,30 +257,36 @@ namespace
 
         void OnLogMessage(const std::string& message, rtc::LoggingSeverity severity) override
         {
-					if (severity >= g_minimum_logging_severity)
-					{
-						const auto sink = g_log_sink;
+            // HACK: We get a lot of UDP blocking messages, we need to figure out why
+            if (message.find("bytes failed with error 10035") != std::string::npos) {
+                SetConsoleTitleA(message.c_str());
+                return;
+            }
 
-						if (sink)
-						{
-							sink(message.c_str(), severity);
-						}
-						else
-						{
-							switch (severity)
-							{
-							case rtc::LoggingSeverity::LS_WARNING:
-								std::cout << "RTC WARN: " << message << std::endl;
-								break;
-							case rtc::LoggingSeverity::LS_ERROR:
-								std::cerr << "RTC FAIL: " << message << std::endl;
-								break;
-							default:
-								std::cout << "RTC INFO: " << message << std::endl;
-								break;
-							}
-						}
-					}
+            if (severity >= g_minimum_logging_severity)
+            {
+                const auto sink = g_log_sink;
+
+                if (sink)
+                {
+                    sink(message.c_str(), severity);
+                }
+                else
+                {
+                    switch (severity)
+                    {
+                    case rtc::LoggingSeverity::LS_WARNING:
+                        std::cout << "RTC WARN: " << message << std::endl;
+                        break;
+                    case rtc::LoggingSeverity::LS_ERROR:
+                        std::cerr << "RTC FAIL: " << message << std::endl;
+                        break;
+                    default:
+                        std::cout << "RTC INFO: " << message << std::endl;
+                        break;
+                    }
+                }
+            }
         }
 
         void OnLogMessage(const std::string& message) override

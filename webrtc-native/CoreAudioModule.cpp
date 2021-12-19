@@ -25,7 +25,7 @@
 
 namespace webrtc {
 
-    rtc::scoped_refptr<AudioDeviceModule> AudioDeviceModule::Create() {
+    rtc::scoped_refptr<AudioDeviceModule> CoreAudioModule::Create() {
         RTC_LOG(INFO) << __FUNCTION__;
 
         rtc::scoped_refptr<CoreAudioModule> audioDevice(
@@ -52,8 +52,8 @@ namespace webrtc {
     int32_t CoreAudioModule::CreateCoreAudioDevice() {
         RTC_LOG(INFO) << __FUNCTION__;
         RTC_LOG(INFO) << "Attempting to use the Windows Core Audio device...";
-        if (AudioDeviceWindowsCore::CoreAudioIsSupported()) {
-            audio_device_.reset(new AudioDeviceWindowsCore());
+        if (CoreAudioDevice::CoreAudioIsSupported()) {
+            audio_device_.reset(new CoreAudioDevice());
             RTC_LOG(INFO) << "Windows Core Audio device is created";
         }
 
@@ -639,32 +639,36 @@ namespace webrtc {
     bool CoreAudioModule::BuiltInAGCIsAvailable() const {
         RTC_LOG(INFO) << __FUNCTION__;
         CHECKinitialized__BOOL();
-        bool isAvailable = audio_device_->BuiltInAGCIsAvailable();
-        RTC_LOG(INFO) << "output: " << isAvailable;
-        return isAvailable;
+        return true;
+        // bool isAvailable = audio_device_->BuiltInAGCIsAvailable();
+        // RTC_LOG(INFO) << "output: " << isAvailable;
+        // return isAvailable;
     }
 
     int32_t CoreAudioModule::EnableBuiltInAGC(bool enable) {
         RTC_LOG(INFO) << __FUNCTION__ << "(" << enable << ")";
         CHECKinitialized_();
-        int32_t ok = audio_device_->EnableBuiltInAGC(enable);
-        RTC_LOG(INFO) << "output: " << ok;
-        return ok;
+        return 0;
+        // int32_t ok = audio_device_->EnableBuiltInAGC(enable);
+        // RTC_LOG(INFO) << "output: " << ok;
+        // return ok;
     }
 
     bool CoreAudioModule::BuiltInNSIsAvailable() const {
         RTC_LOG(INFO) << __FUNCTION__;
         CHECKinitialized__BOOL();
-        bool isAvailable = audio_device_->BuiltInNSIsAvailable();
-        RTC_LOG(INFO) << "output: " << isAvailable;
-        return isAvailable;
+        return true;
+        // bool isAvailable = audio_device_->BuiltInNSIsAvailable();
+        // RTC_LOG(INFO) << "output: " << isAvailable;
+        // return isAvailable;
     }
 
     int32_t CoreAudioModule::EnableBuiltInNS(bool enable) {
         RTC_LOG(INFO) << __FUNCTION__ << "(" << enable << ")";
         CHECKinitialized_();
-        int32_t ok = audio_device_->EnableBuiltInNS(enable);
-        RTC_LOG(INFO) << "output: " << ok;
-        return ok;
+        return 0;
+        // int32_t ok = audio_device_->EnableBuiltInNS(enable);
+        // RTC_LOG(INFO) << "output: " << ok;
+        // return ok;
     }
 }  // namespace webrtc

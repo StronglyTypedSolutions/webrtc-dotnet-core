@@ -247,22 +247,22 @@ namespace webrtc {
         // IMMDeviceEnumerator  Provides methods for enumerating audio devices.
         // IMMEndpoint          Represents an audio endpoint device.
         //
-        IMMDeviceEnumerator* pIMMD(NULL);
+        IMMDeviceEnumerator* pIMMD(nullptr);
         const CLSID CLSID_MMDeviceEnumerator = __uuidof(MMDeviceEnumerator);
         const IID IID_IMMDeviceEnumerator = __uuidof(IMMDeviceEnumerator);
 
         hr = CoCreateInstance(
             CLSID_MMDeviceEnumerator,  // GUID value of MMDeviceEnumerator coclass
-            NULL, CLSCTX_ALL,
+            nullptr, CLSCTX_ALL,
             IID_IMMDeviceEnumerator,  // GUID value of the IMMDeviceEnumerator
                                       // interface
             (void**)&pIMMD);
 
         if (FAILED(hr)) {
-            RTC_LOG(LS_ERROR) << "AudioDeviceWindowsCore::CoreAudioIsSupported()"
+            RTC_LOG(LS_ERROR) << "CoreAudioDevice::CoreAudioIsSupported()"
                 << " Failed to create the required COM object (hr=" << hr
                 << ")";
-            RTC_LOG(LS_VERBOSE) << "AudioDeviceWindowsCore::CoreAudioIsSupported()"
+            RTC_LOG(LS_VERBOSE) << "CoreAudioDevice::CoreAudioIsSupported()"
                 << " CoCreateInstance(MMDeviceEnumerator) failed (hr="
                 << hr << ")";
 
@@ -272,8 +272,8 @@ namespace webrtc {
 
             // Gets the system's human readable message string for this HRESULT.
             // All error message in English by default.
-            DWORD messageLength = ::FormatMessageW(dwFlags, 0, hr, dwLangID, errorText,
-                MAXERRORLENGTH, NULL);
+            DWORD messageLength = ::FormatMessageW(dwFlags, nullptr, hr, dwLangID, errorText,
+                MAXERRORLENGTH, nullptr);
 
             assert(messageLength <= MAXERRORLENGTH);
 
@@ -290,7 +290,7 @@ namespace webrtc {
         else {
             MMDeviceIsAvailable = true;
             RTC_LOG(LS_VERBOSE)
-                << "AudioDeviceWindowsCore::CoreAudioIsSupported()"
+                << "CoreAudioDevice::CoreAudioIsSupported()"
                 << " CoCreateInstance(MMDeviceEnumerator) succeeded (hr=" << hr << ")";
             SAFE_RELEASE(pIMMD);
         }
@@ -304,7 +304,7 @@ namespace webrtc {
             coreAudioIsSupported = false;
 
             CoreAudioDevice* p = new CoreAudioDevice();
-            if (p == NULL) {
+            if (p == nullptr) {
                 return false;
             }
 
@@ -327,24 +327,8 @@ namespace webrtc {
                 }
                 if (ok) {
                     RTC_LOG(LS_WARNING)
-                        << "AudioDeviceWindowsCore::CoreAudioIsSupported()"
+                        << "CoreAudioDevice::CoreAudioIsSupported()"
                         << " Failed to use Core Audio Recording for device id=" << i;
-                }
-            }
-
-            int16_t numDevsPlay = p->PlayoutDevices();
-            for (uint16_t i = 0; i < numDevsPlay; i++) {
-                ok |= p->SetPlayoutDevice(i);
-                temp_ok = p->PlayoutIsAvailable(available);
-                ok |= temp_ok;
-                ok |= (available == false);
-                if (available) {
-                    ok |= p->InitSpeaker();
-                }
-                if (ok) {
-                    RTC_LOG(LS_WARNING)
-                        << "AudioDeviceWindowsCore::CoreAudioIsSupported()"
-                        << " Failed to use Core Audio Playout for device id=" << i;
                 }
             }
 
@@ -373,44 +357,33 @@ namespace webrtc {
     // ============================================================================
 
     // ----------------------------------------------------------------------------
-    //  AudioDeviceWindowsCore() - ctor
+    //  CoreAudioDevice() - ctor
     // ----------------------------------------------------------------------------
 
     CoreAudioDevice::CoreAudioDevice()
-        : _avrtLibrary(NULL),
+        : _avrtLibrary(nullptr),
         _winSupportAvrt(false),
         _comInit(ScopedCOMInitializer::kMTA),
-        _ptrAudioBuffer(NULL),
-        _ptrEnumerator(NULL),
-        _ptrRenderCollection(NULL),
-        _ptrCaptureCollection(NULL),
-        _ptrDeviceOut(NULL),
-        _ptrDeviceIn(NULL),
-        _ptrClientOut(NULL),
-        _ptrClientIn(NULL),
-        _ptrRenderClient(NULL),
-        _ptrCaptureClient(NULL),
-        _ptrCaptureVolume(NULL),
-        _ptrRenderSimpleVolume(NULL),
-        _dmo(NULL),
-        _mediaBuffer(NULL),
-        _builtInAecEnabled(false),
-        _hRenderSamplesReadyEvent(NULL),
-        _hPlayThread(NULL),
-        _hRenderStartedEvent(NULL),
-        _hShutdownRenderEvent(NULL),
-        _hCaptureSamplesReadyEvent(NULL),
-        _hRecThread(NULL),
-        _hCaptureStartedEvent(NULL),
-        _hShutdownCaptureEvent(NULL),
-        _hMmTask(NULL),
-        _playAudioFrameSize(0),
-        _playSampleRate(0),
-        _playBlockSize(0),
-        _playChannels(2),
-        _sndCardPlayDelay(0),
+        _ptrAudioBuffer(nullptr),
+        _ptrEnumerator(nullptr),
+        _ptrLoopbackCollection(nullptr),
+        _ptrDeviceIn(nullptr),
+        _ptrClientIn(nullptr),
+        _ptrLoopbackClient(nullptr),
+        _ptrCaptureVolume(nullptr),
+        _ptrRenderSimpleVolume(nullptr),
+        _hCaptureSamplesReadyEvent(nullptr),
+        _hRecThread(nullptr),
+        _hCaptureStartedEvent(nullptr),
+        _hShutdownCaptureEvent(nullptr),
+        _hMmTask(nullptr),
+        // _playAudioFrameSize(0),
+        // _playSampleRate(0),
+        // _playBlockSize(0),
+        // _playChannels(2),
+        // _sndCardPlayDelay(0),
         _sndCardRecDelay(0),
-        _writtenSamples(0),
+        // _writtenSamples(0),
         _readSamples(0),
         _recAudioFrameSize(0),
         _recSampleRate(0),
@@ -418,17 +391,13 @@ namespace webrtc {
         _recChannels(2),
         _initialized(false),
         _recording(false),
-        _playing(false),
         _recIsInitialized(false),
         _playIsInitialized(false),
         _speakerIsInitialized(false),
         _microphoneIsInitialized(false),
         _usingInputDeviceIndex(false),
-        _usingOutputDeviceIndex(false),
         _inputDevice(AudioDeviceModule::kDefaultCommunicationDevice),
-        _outputDevice(AudioDeviceModule::kDefaultCommunicationDevice),
-        _inputDeviceIndex(0),
-        _outputDeviceIndex(0) {
+        _inputDeviceIndex(0) {
         RTC_LOG(LS_INFO) << __FUNCTION__ << " created";
         assert(_comInit.succeeded());
 
@@ -439,7 +408,7 @@ namespace webrtc {
             if (_avrtLibrary) {
                 // Handle is valid (should only happen if OS larger than vista & win7).
                 // Try to get the function addresses.
-                RTC_LOG(LS_VERBOSE) << "AudioDeviceWindowsCore::AudioDeviceWindowsCore()"
+                RTC_LOG(LS_VERBOSE) << "CoreAudioDevice::CoreAudioDevice()"
                     << " The Avrt DLL module is now loaded";
 
                 _PAvRevertMmThreadCharacteristics =
@@ -454,13 +423,13 @@ namespace webrtc {
                 if (_PAvRevertMmThreadCharacteristics &&
                     _PAvSetMmThreadCharacteristicsA && _PAvSetMmThreadPriority) {
                     RTC_LOG(LS_VERBOSE)
-                        << "AudioDeviceWindowsCore::AudioDeviceWindowsCore()"
+                        << "CoreAudioDevice::CoreAudioDevice()"
                         << " AvRevertMmThreadCharacteristics() is OK";
                     RTC_LOG(LS_VERBOSE)
-                        << "AudioDeviceWindowsCore::AudioDeviceWindowsCore()"
+                        << "CoreAudioDevice::CoreAudioDevice()"
                         << " AvSetMmThreadCharacteristicsA() is OK";
                     RTC_LOG(LS_VERBOSE)
-                        << "AudioDeviceWindowsCore::AudioDeviceWindowsCore()"
+                        << "CoreAudioDevice::CoreAudioDevice()"
                         << " AvSetMmThreadPriority() is OK";
                     _winSupportAvrt = true;
                 }
@@ -473,12 +442,9 @@ namespace webrtc {
         // system automatically sets the state to nonsignaled. If no threads are
         // waiting, the event object's state remains signaled. (Except for
         // _hShutdownCaptureEvent, which is used to shutdown multiple threads).
-        _hRenderSamplesReadyEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-        _hCaptureSamplesReadyEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-        _hShutdownRenderEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-        _hShutdownCaptureEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
-        _hRenderStartedEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-        _hCaptureStartedEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+        _hCaptureSamplesReadyEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+        _hShutdownCaptureEvent = CreateEvent(nullptr, TRUE, FALSE, nullptr);
+        _hCaptureStartedEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
 
         _perfCounterFreq.QuadPart = 1;
         _perfCounterFactor = 0.0;
@@ -488,41 +454,20 @@ namespace webrtc {
         _recChannelsPrioList[1] = 1;  // mono is prio 2
         _recChannelsPrioList[2] = 4;  // quad is prio 3
 
-        // list of number of channels to use on playout side
-        _playChannelsPrioList[0] = 2;  // stereo is prio 1
-        _playChannelsPrioList[1] = 1;  // mono is prio 2
-
-        HRESULT hr;
-
         // We know that this API will work since it has already been verified in
         // CoreAudioIsSupported, hence no need to check for errors here as well.
 
         // Retrive the IMMDeviceEnumerator API (should load the MMDevAPI.dll)
         // TODO(henrika): we should probably move this allocation to Init() instead
         // and deallocate in Terminate() to make the implementation more symmetric.
-        CoCreateInstance(__uuidof(MMDeviceEnumerator), NULL, CLSCTX_ALL,
+        CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_ALL,
             __uuidof(IMMDeviceEnumerator),
             reinterpret_cast<void**>(&_ptrEnumerator));
         assert(NULL != _ptrEnumerator);
-
-        // DMO initialization for built-in WASAPI AEC.
-        {
-            IMediaObject* ptrDMO = NULL;
-            hr = CoCreateInstance(CLSID_CWMAudioAEC, NULL, CLSCTX_INPROC_SERVER,
-                IID_IMediaObject, reinterpret_cast<void**>(&ptrDMO));
-            if (FAILED(hr) || ptrDMO == NULL) {
-                // Since we check that _dmo is non-NULL in EnableBuiltInAEC(), the
-                // feature is prevented from being enabled.
-                _builtInAecEnabled = false;
-                _TraceCOMError(hr);
-            }
-            _dmo = ptrDMO;
-            SAFE_RELEASE(ptrDMO);
-        }
     }
 
     // ----------------------------------------------------------------------------
-    //  AudioDeviceWindowsCore() - dtor
+    //  CoreAudioDevice() - dtor
     // ----------------------------------------------------------------------------
 
     CoreAudioDevice::~CoreAudioDevice() {
@@ -534,47 +479,32 @@ namespace webrtc {
         // it here and not in Terminate() since we don't recreate it in Init().
         SAFE_RELEASE(_ptrEnumerator);
 
-        _ptrAudioBuffer = NULL;
+        _ptrAudioBuffer = nullptr;
 
-        if (NULL != _hRenderSamplesReadyEvent) {
-            CloseHandle(_hRenderSamplesReadyEvent);
-            _hRenderSamplesReadyEvent = NULL;
-        }
-
-        if (NULL != _hCaptureSamplesReadyEvent) {
+        if (nullptr != _hCaptureSamplesReadyEvent) {
             CloseHandle(_hCaptureSamplesReadyEvent);
-            _hCaptureSamplesReadyEvent = NULL;
+            _hCaptureSamplesReadyEvent = nullptr;
         }
 
-        if (NULL != _hRenderStartedEvent) {
-            CloseHandle(_hRenderStartedEvent);
-            _hRenderStartedEvent = NULL;
-        }
-
-        if (NULL != _hCaptureStartedEvent) {
+        if (nullptr != _hCaptureStartedEvent) {
             CloseHandle(_hCaptureStartedEvent);
-            _hCaptureStartedEvent = NULL;
+            _hCaptureStartedEvent = nullptr;
         }
 
-        if (NULL != _hShutdownRenderEvent) {
-            CloseHandle(_hShutdownRenderEvent);
-            _hShutdownRenderEvent = NULL;
-        }
-
-        if (NULL != _hShutdownCaptureEvent) {
+        if (nullptr != _hShutdownCaptureEvent) {
             CloseHandle(_hShutdownCaptureEvent);
-            _hShutdownCaptureEvent = NULL;
+            _hShutdownCaptureEvent = nullptr;
         }
 
         if (_avrtLibrary) {
             BOOL freeOK = FreeLibrary(_avrtLibrary);
             if (!freeOK) {
                 RTC_LOG(LS_WARNING)
-                    << "AudioDeviceWindowsCore::~AudioDeviceWindowsCore()"
+                    << "CoreAudioDevice::~CoreAudioDevice()"
                     << " failed to free the loaded Avrt DLL module correctly";
             }
             else {
-                RTC_LOG(LS_WARNING) << "AudioDeviceWindowsCore::~AudioDeviceWindowsCore()"
+                RTC_LOG(LS_WARNING) << "CoreAudioDevice::~CoreAudioDevice()"
                     << " the Avrt DLL module is now unloaded";
             }
         }
@@ -621,11 +551,10 @@ namespace webrtc {
             return InitStatus::OK;
         }
 
-        // Enumerate all audio rendering and capturing endpoint devices.
+        // Enumerate all audio loopback endpoint devices.
         // Note that, some of these will not be able to select by the user.
         // The complete collection is for internal use only.
-        _EnumerateEndpointDevicesAll(eRender);
-        _EnumerateEndpointDevicesAll(eCapture);
+        _EnumerateEndpointDevicesAll();
 
         _initialized = true;
 
@@ -646,17 +575,12 @@ namespace webrtc {
         _initialized = false;
         _speakerIsInitialized = false;
         _microphoneIsInitialized = false;
-        _playing = false;
         _recording = false;
 
-        SAFE_RELEASE(_ptrRenderCollection);
-        SAFE_RELEASE(_ptrCaptureCollection);
-        SAFE_RELEASE(_ptrDeviceOut);
+        SAFE_RELEASE(_ptrLoopbackCollection);
         SAFE_RELEASE(_ptrDeviceIn);
-        SAFE_RELEASE(_ptrClientOut);
         SAFE_RELEASE(_ptrClientIn);
-        SAFE_RELEASE(_ptrRenderClient);
-        SAFE_RELEASE(_ptrCaptureClient);
+        SAFE_RELEASE(_ptrLoopbackClient);
         SAFE_RELEASE(_ptrCaptureVolume);
         SAFE_RELEASE(_ptrRenderSimpleVolume);
 
@@ -676,68 +600,8 @@ namespace webrtc {
     // ----------------------------------------------------------------------------
 
     int32_t CoreAudioDevice::InitSpeaker() {
-        rtc::CritScope lock(&_critSect);
-
-        if (_playing) {
-            return -1;
-        }
-
-        if (_ptrDeviceOut == NULL) {
-            return -1;
-        }
-
-        if (_usingOutputDeviceIndex) {
-            int16_t nDevices = PlayoutDevices();
-            if (_outputDeviceIndex > (nDevices - 1)) {
-                RTC_LOG(LS_ERROR) << "current device selection is invalid => unable to"
-                    << " initialize";
-                return -1;
-            }
-        }
-
-        int32_t ret(0);
-
-        SAFE_RELEASE(_ptrDeviceOut);
-        if (_usingOutputDeviceIndex) {
-            // Refresh the selected rendering endpoint device using current index
-            ret = _GetListDevice(eRender, _outputDeviceIndex, &_ptrDeviceOut);
-        }
-        else {
-            ERole role;
-            (_outputDevice == AudioDeviceModule::kDefaultDevice)
-                ? role = eConsole
-                : role = eCommunications;
-            // Refresh the selected rendering endpoint device using role
-            ret = _GetDefaultDevice(eRender, role, &_ptrDeviceOut);
-        }
-
-        if (ret != 0 || (_ptrDeviceOut == NULL)) {
-            RTC_LOG(LS_ERROR) << "failed to initialize the rendering enpoint device";
-            SAFE_RELEASE(_ptrDeviceOut);
-            return -1;
-        }
-
-        IAudioSessionManager* pManager = NULL;
-        ret = _ptrDeviceOut->Activate(__uuidof(IAudioSessionManager), CLSCTX_ALL,
-            NULL, (void**)&pManager);
-        if (ret != 0 || pManager == NULL) {
-            RTC_LOG(LS_ERROR) << "failed to initialize the render manager";
-            SAFE_RELEASE(pManager);
-            return -1;
-        }
-
-        SAFE_RELEASE(_ptrRenderSimpleVolume);
-        ret = pManager->GetSimpleAudioVolume(NULL, FALSE, &_ptrRenderSimpleVolume);
-        if (ret != 0 || _ptrRenderSimpleVolume == NULL) {
-            RTC_LOG(LS_ERROR) << "failed to initialize the render simple volume";
-            SAFE_RELEASE(pManager);
-            SAFE_RELEASE(_ptrRenderSimpleVolume);
-            return -1;
-        }
-        SAFE_RELEASE(pManager);
-
+        // [PV] No speaker in the cloud, we're never receiving audio
         _speakerIsInitialized = true;
-
         return 0;
     }
 
@@ -746,13 +610,14 @@ namespace webrtc {
     // ----------------------------------------------------------------------------
 
     int32_t CoreAudioDevice::InitMicrophone() {
+        // [PV] Microphone is actually loopback of default system speaker
         rtc::CritScope lock(&_critSect);
 
         if (_recording) {
             return -1;
         }
 
-        if (_ptrDeviceIn == NULL) {
+        if (_ptrDeviceIn == nullptr) {
             return -1;
         }
 
@@ -770,27 +635,28 @@ namespace webrtc {
         SAFE_RELEASE(_ptrDeviceIn);
         if (_usingInputDeviceIndex) {
             // Refresh the selected capture endpoint device using current index
-            ret = _GetListDevice(eCapture, _inputDeviceIndex, &_ptrDeviceIn);
+            ret = _GetListDevice(_inputDeviceIndex, &_ptrDeviceIn);
         }
         else {
-            ERole role;
-            (_inputDevice == AudioDeviceModule::kDefaultDevice)
-                ? role = eConsole
-                : role = eCommunications;
+            // [PV] Changed for loopback
+            // ERole role = (_inputDevice == AudioDeviceModule::kDefaultDevice)
+            //     ? eConsole
+            //     : eCommunications;
             // Refresh the selected capture endpoint device using role
-            ret = _GetDefaultDevice(eCapture, role, &_ptrDeviceIn);
+            // [PV] Changed to eRender for loopback
+            ret = _GetDefaultDevice(eMultimedia, &_ptrDeviceIn);
         }
 
-        if (ret != 0 || (_ptrDeviceIn == NULL)) {
+        if (ret != 0 || (_ptrDeviceIn == nullptr)) {
             RTC_LOG(LS_ERROR) << "failed to initialize the capturing enpoint device";
             SAFE_RELEASE(_ptrDeviceIn);
             return -1;
         }
 
         SAFE_RELEASE(_ptrCaptureVolume);
-        ret = _ptrDeviceIn->Activate(__uuidof(IAudioEndpointVolume), CLSCTX_ALL, NULL,
+        ret = _ptrDeviceIn->Activate(__uuidof(IAudioEndpointVolume), CLSCTX_ALL, nullptr,
             reinterpret_cast<void**>(&_ptrCaptureVolume));
-        if (ret != 0 || _ptrCaptureVolume == NULL) {
+        if (ret != 0 || _ptrCaptureVolume == nullptr) {
             RTC_LOG(LS_ERROR) << "failed to initialize the capture volume";
             SAFE_RELEASE(_ptrCaptureVolume);
             return -1;
@@ -822,40 +688,7 @@ namespace webrtc {
     // ----------------------------------------------------------------------------
 
     int32_t CoreAudioDevice::SpeakerVolumeIsAvailable(bool& available) {
-        rtc::CritScope lock(&_critSect);
-
-        if (_ptrDeviceOut == NULL) {
-            return -1;
-        }
-
-        HRESULT hr = S_OK;
-        IAudioSessionManager* pManager = NULL;
-        ISimpleAudioVolume* pVolume = NULL;
-        float volume(0.0f);
-
-        hr = _ptrDeviceOut->Activate(__uuidof(IAudioSessionManager), CLSCTX_ALL, NULL,
-            (void**)&pManager);
-        EXIT_ON_ERROR(hr);
-
-        hr = pManager->GetSimpleAudioVolume(NULL, FALSE, &pVolume);
-        EXIT_ON_ERROR(hr);
-
-        hr = pVolume->GetMasterVolume(&volume);
-        if (FAILED(hr)) {
-            available = false;
-        }
-        available = true;
-
-        SAFE_RELEASE(pManager);
-        SAFE_RELEASE(pVolume);
-
         return 0;
-
-    Exit:
-        _TraceCOMError(hr);
-        SAFE_RELEASE(pManager);
-        SAFE_RELEASE(pVolume);
-        return -1;
     }
 
     // ----------------------------------------------------------------------------
@@ -863,37 +696,7 @@ namespace webrtc {
     // ----------------------------------------------------------------------------
 
     int32_t CoreAudioDevice::SetSpeakerVolume(uint32_t volume) {
-        {
-            rtc::CritScope lock(&_critSect);
-
-            if (!_speakerIsInitialized) {
-                return -1;
-            }
-
-            if (_ptrDeviceOut == NULL) {
-                return -1;
-            }
-        }
-
-        if (volume < (uint32_t)MIN_CORE_SPEAKER_VOLUME ||
-            volume >(uint32_t)MAX_CORE_SPEAKER_VOLUME) {
-            return -1;
-        }
-
-        HRESULT hr = S_OK;
-
-        // scale input volume to valid range (0.0 to 1.0)
-        const float fLevel = (float)volume / MAX_CORE_SPEAKER_VOLUME;
-        _volumeMutex.Enter();
-        hr = _ptrRenderSimpleVolume->SetMasterVolume(fLevel, NULL);
-        _volumeMutex.Leave();
-        EXIT_ON_ERROR(hr);
-
         return 0;
-
-    Exit:
-        _TraceCOMError(hr);
-        return -1;
     }
 
     // ----------------------------------------------------------------------------
@@ -901,34 +704,8 @@ namespace webrtc {
     // ----------------------------------------------------------------------------
 
     int32_t CoreAudioDevice::SpeakerVolume(uint32_t& volume) const {
-        {
-            rtc::CritScope lock(&_critSect);
-
-            if (!_speakerIsInitialized) {
-                return -1;
-            }
-
-            if (_ptrDeviceOut == NULL) {
-                return -1;
-            }
-        }
-
-        HRESULT hr = S_OK;
-        float fLevel(0.0f);
-
-        _volumeMutex.Enter();
-        hr = _ptrRenderSimpleVolume->GetMasterVolume(&fLevel);
-        _volumeMutex.Leave();
-        EXIT_ON_ERROR(hr);
-
-        // scale input volume range [0.0,1.0] to valid output range
-        volume = static_cast<uint32_t>(fLevel * MAX_CORE_SPEAKER_VOLUME);
-
+        volume = 0;
         return 0;
-
-    Exit:
-        _TraceCOMError(hr);
-        return -1;
     }
 
     // ----------------------------------------------------------------------------
@@ -941,12 +718,7 @@ namespace webrtc {
     // ----------------------------------------------------------------------------
 
     int32_t CoreAudioDevice::MaxSpeakerVolume(uint32_t& maxVolume) const {
-        if (!_speakerIsInitialized) {
-            return -1;
-        }
-
-        maxVolume = static_cast<uint32_t>(MAX_CORE_SPEAKER_VOLUME);
-
+        maxVolume = 0;
         return 0;
     }
 
@@ -955,12 +727,7 @@ namespace webrtc {
     // ----------------------------------------------------------------------------
 
     int32_t CoreAudioDevice::MinSpeakerVolume(uint32_t& minVolume) const {
-        if (!_speakerIsInitialized) {
-            return -1;
-        }
-
-        minVolume = static_cast<uint32_t>(MIN_CORE_SPEAKER_VOLUME);
-
+        minVolume = 0;
         return 0;
     }
 
@@ -969,35 +736,8 @@ namespace webrtc {
     // ----------------------------------------------------------------------------
 
     int32_t CoreAudioDevice::SpeakerMuteIsAvailable(bool& available) {
-        rtc::CritScope lock(&_critSect);
-
-        if (_ptrDeviceOut == NULL) {
-            return -1;
-        }
-
-        HRESULT hr = S_OK;
-        IAudioEndpointVolume* pVolume = NULL;
-
-        // Query the speaker system mute state.
-        hr = _ptrDeviceOut->Activate(__uuidof(IAudioEndpointVolume), CLSCTX_ALL, NULL,
-            reinterpret_cast<void**>(&pVolume));
-        EXIT_ON_ERROR(hr);
-
-        BOOL mute;
-        hr = pVolume->GetMute(&mute);
-        if (FAILED(hr))
-            available = false;
-        else
-            available = true;
-
-        SAFE_RELEASE(pVolume);
-
+        available = false;
         return 0;
-
-    Exit:
-        _TraceCOMError(hr);
-        SAFE_RELEASE(pVolume);
-        return -1;
     }
 
     // ----------------------------------------------------------------------------
@@ -1005,36 +745,10 @@ namespace webrtc {
     // ----------------------------------------------------------------------------
 
     int32_t CoreAudioDevice::SetSpeakerMute(bool enable) {
-        rtc::CritScope lock(&_critSect);
-
         if (!_speakerIsInitialized) {
             return -1;
         }
-
-        if (_ptrDeviceOut == NULL) {
-            return -1;
-        }
-
-        HRESULT hr = S_OK;
-        IAudioEndpointVolume* pVolume = NULL;
-        const BOOL mute(enable);
-
-        // Set the speaker system mute state.
-        hr = _ptrDeviceOut->Activate(__uuidof(IAudioEndpointVolume), CLSCTX_ALL, NULL,
-            reinterpret_cast<void**>(&pVolume));
-        EXIT_ON_ERROR(hr);
-
-        hr = pVolume->SetMute(mute, NULL);
-        EXIT_ON_ERROR(hr);
-
-        SAFE_RELEASE(pVolume);
-
         return 0;
-
-    Exit:
-        _TraceCOMError(hr);
-        SAFE_RELEASE(pVolume);
-        return -1;
     }
 
     // ----------------------------------------------------------------------------
@@ -1045,33 +759,8 @@ namespace webrtc {
         if (!_speakerIsInitialized) {
             return -1;
         }
-
-        if (_ptrDeviceOut == NULL) {
-            return -1;
-        }
-
-        HRESULT hr = S_OK;
-        IAudioEndpointVolume* pVolume = NULL;
-
-        // Query the speaker system mute state.
-        hr = _ptrDeviceOut->Activate(__uuidof(IAudioEndpointVolume), CLSCTX_ALL, NULL,
-            reinterpret_cast<void**>(&pVolume));
-        EXIT_ON_ERROR(hr);
-
-        BOOL mute;
-        hr = pVolume->GetMute(&mute);
-        EXIT_ON_ERROR(hr);
-
-        enabled = (mute == TRUE) ? true : false;
-
-        SAFE_RELEASE(pVolume);
-
+        enabled = false;
         return 0;
-
-    Exit:
-        _TraceCOMError(hr);
-        SAFE_RELEASE(pVolume);
-        return -1;
     }
 
     // ----------------------------------------------------------------------------
@@ -1079,34 +768,8 @@ namespace webrtc {
     // ----------------------------------------------------------------------------
 
     int32_t CoreAudioDevice::MicrophoneMuteIsAvailable(bool& available) {
-        rtc::CritScope lock(&_critSect);
-
-        if (_ptrDeviceIn == NULL) {
-            return -1;
-        }
-
-        HRESULT hr = S_OK;
-        IAudioEndpointVolume* pVolume = NULL;
-
-        // Query the microphone system mute state.
-        hr = _ptrDeviceIn->Activate(__uuidof(IAudioEndpointVolume), CLSCTX_ALL, NULL,
-            reinterpret_cast<void**>(&pVolume));
-        EXIT_ON_ERROR(hr);
-
-        BOOL mute;
-        hr = pVolume->GetMute(&mute);
-        if (FAILED(hr))
-            available = false;
-        else
-            available = true;
-
-        SAFE_RELEASE(pVolume);
+        available = false;
         return 0;
-
-    Exit:
-        _TraceCOMError(hr);
-        SAFE_RELEASE(pVolume);
-        return -1;
     }
 
     // ----------------------------------------------------------------------------
@@ -1117,30 +780,7 @@ namespace webrtc {
         if (!_microphoneIsInitialized) {
             return -1;
         }
-
-        if (_ptrDeviceIn == NULL) {
-            return -1;
-        }
-
-        HRESULT hr = S_OK;
-        IAudioEndpointVolume* pVolume = NULL;
-        const BOOL mute(enable);
-
-        // Set the microphone system mute state.
-        hr = _ptrDeviceIn->Activate(__uuidof(IAudioEndpointVolume), CLSCTX_ALL, NULL,
-            reinterpret_cast<void**>(&pVolume));
-        EXIT_ON_ERROR(hr);
-
-        hr = pVolume->SetMute(mute, NULL);
-        EXIT_ON_ERROR(hr);
-
-        SAFE_RELEASE(pVolume);
         return 0;
-
-    Exit:
-        _TraceCOMError(hr);
-        SAFE_RELEASE(pVolume);
-        return -1;
     }
 
     // ----------------------------------------------------------------------------
@@ -1151,28 +791,8 @@ namespace webrtc {
         if (!_microphoneIsInitialized) {
             return -1;
         }
-
-        HRESULT hr = S_OK;
-        IAudioEndpointVolume* pVolume = NULL;
-
-        // Query the microphone system mute state.
-        hr = _ptrDeviceIn->Activate(__uuidof(IAudioEndpointVolume), CLSCTX_ALL, NULL,
-            reinterpret_cast<void**>(&pVolume));
-        EXIT_ON_ERROR(hr);
-
-        BOOL mute;
-        hr = pVolume->GetMute(&mute);
-        EXIT_ON_ERROR(hr);
-
-        enabled = (mute == TRUE) ? true : false;
-
-        SAFE_RELEASE(pVolume);
+        enabled = false;
         return 0;
-
-    Exit:
-        _TraceCOMError(hr);
-        SAFE_RELEASE(pVolume);
-        return -1;
     }
 
     // ----------------------------------------------------------------------------
@@ -1223,7 +843,7 @@ namespace webrtc {
     // ----------------------------------------------------------------------------
 
     int32_t CoreAudioDevice::StereoPlayoutIsAvailable(bool& available) {
-        available = true;
+        available = false;
         return 0;
     }
 
@@ -1232,19 +852,6 @@ namespace webrtc {
     // ----------------------------------------------------------------------------
 
     int32_t CoreAudioDevice::SetStereoPlayout(bool enable) {
-        rtc::CritScope lock(&_critSect);
-
-        if (enable) {
-            _playChannelsPrioList[0] = 2;  // try stereo first
-            _playChannelsPrioList[1] = 1;
-            _playChannels = 2;
-        }
-        else {
-            _playChannelsPrioList[0] = 1;  // try mono first
-            _playChannelsPrioList[1] = 2;
-            _playChannels = 1;
-        }
-
         return 0;
     }
 
@@ -1253,11 +860,7 @@ namespace webrtc {
     // ----------------------------------------------------------------------------
 
     int32_t CoreAudioDevice::StereoPlayout(bool& enabled) const {
-        if (_playChannels == 2)
-            enabled = true;
-        else
-            enabled = false;
-
+        enabled = false;
         return 0;
     }
 
@@ -1268,15 +871,15 @@ namespace webrtc {
     int32_t CoreAudioDevice::MicrophoneVolumeIsAvailable(bool& available) {
         rtc::CritScope lock(&_critSect);
 
-        if (_ptrDeviceIn == NULL) {
+        if (_ptrDeviceIn == nullptr) {
             return -1;
         }
 
         HRESULT hr = S_OK;
-        IAudioEndpointVolume* pVolume = NULL;
+        IAudioEndpointVolume* pVolume = nullptr;
         float volume(0.0f);
 
-        hr = _ptrDeviceIn->Activate(__uuidof(IAudioEndpointVolume), CLSCTX_ALL, NULL,
+        hr = _ptrDeviceIn->Activate(__uuidof(IAudioEndpointVolume), CLSCTX_ALL, nullptr,
             reinterpret_cast<void**>(&pVolume));
         EXIT_ON_ERROR(hr);
 
@@ -1300,7 +903,7 @@ namespace webrtc {
     // ----------------------------------------------------------------------------
 
     int32_t CoreAudioDevice::SetMicrophoneVolume(uint32_t volume) {
-        RTC_LOG(LS_VERBOSE) << "AudioDeviceWindowsCore::SetMicrophoneVolume(volume="
+        RTC_LOG(LS_VERBOSE) << "CoreAudioDevice::SetMicrophoneVolume(volume="
             << volume << ")";
 
         {
@@ -1310,7 +913,7 @@ namespace webrtc {
                 return -1;
             }
 
-            if (_ptrDeviceIn == NULL) {
+            if (_ptrDeviceIn == nullptr) {
                 return -1;
             }
         }
@@ -1324,7 +927,7 @@ namespace webrtc {
         // scale input volume to valid range (0.0 to 1.0)
         const float fLevel = static_cast<float>(volume) / MAX_CORE_MICROPHONE_VOLUME;
         _volumeMutex.Enter();
-        _ptrCaptureVolume->SetMasterVolumeLevelScalar(fLevel, NULL);
+        _ptrCaptureVolume->SetMasterVolumeLevelScalar(fLevel, nullptr);
         _volumeMutex.Leave();
         EXIT_ON_ERROR(hr);
 
@@ -1347,7 +950,7 @@ namespace webrtc {
                 return -1;
             }
 
-            if (_ptrDeviceIn == NULL) {
+            if (_ptrDeviceIn == nullptr) {
                 return -1;
             }
         }
@@ -1412,8 +1015,8 @@ namespace webrtc {
     int16_t CoreAudioDevice::PlayoutDevices() {
         rtc::CritScope lock(&_critSect);
 
-        if (_RefreshDeviceList(eRender) != -1) {
-            return (_DeviceListCount(eRender));
+        if (_RefreshDeviceList() != -1) {
+            return (_DeviceListCount());
         }
 
         return -1;
@@ -1424,46 +1027,6 @@ namespace webrtc {
     // ----------------------------------------------------------------------------
 
     int32_t CoreAudioDevice::SetPlayoutDevice(uint16_t index) {
-        if (_playIsInitialized) {
-            return -1;
-        }
-
-        // Get current number of available rendering endpoint devices and refresh the
-        // rendering collection.
-        UINT nDevices = PlayoutDevices();
-
-        if (index < 0 || index >(nDevices - 1)) {
-            RTC_LOG(LS_ERROR) << "device index is out of range [0," << (nDevices - 1)
-                << "]";
-            return -1;
-        }
-
-        rtc::CritScope lock(&_critSect);
-
-        HRESULT hr(S_OK);
-
-        assert(_ptrRenderCollection != NULL);
-
-        //  Select an endpoint rendering device given the specified index
-        SAFE_RELEASE(_ptrDeviceOut);
-        hr = _ptrRenderCollection->Item(index, &_ptrDeviceOut);
-        if (FAILED(hr)) {
-            _TraceCOMError(hr);
-            SAFE_RELEASE(_ptrDeviceOut);
-            return -1;
-        }
-
-        WCHAR szDeviceName[MAX_PATH];
-        const int bufferLen = sizeof(szDeviceName) / sizeof(szDeviceName)[0];
-
-        // Get the endpoint device's friendly-name
-        if (_GetDeviceName(_ptrDeviceOut, szDeviceName, bufferLen) == 0) {
-            RTC_LOG(LS_VERBOSE) << "friendly name: \"" << szDeviceName << "\"";
-        }
-
-        _usingOutputDeviceIndex = true;
-        _outputDeviceIndex = index;
-
         return 0;
     }
 
@@ -1471,50 +1034,8 @@ namespace webrtc {
     //  SetPlayoutDevice II (II)
     // ----------------------------------------------------------------------------
 
-    int32_t CoreAudioDevice::SetPlayoutDevice(
-        AudioDeviceModule::WindowsDeviceType device) {
-        if (_playIsInitialized) {
-            return -1;
-        }
-
-        ERole role(eCommunications);
-
-        if (device == AudioDeviceModule::kDefaultDevice) {
-            role = eConsole;
-        }
-        else if (device == AudioDeviceModule::kDefaultCommunicationDevice) {
-            role = eCommunications;
-        }
-
-        rtc::CritScope lock(&_critSect);
-
-        // Refresh the list of rendering endpoint devices
-        _RefreshDeviceList(eRender);
-
-        HRESULT hr(S_OK);
-
-        assert(_ptrEnumerator != NULL);
-
-        //  Select an endpoint rendering device given the specified role
-        SAFE_RELEASE(_ptrDeviceOut);
-        hr = _ptrEnumerator->GetDefaultAudioEndpoint(eRender, role, &_ptrDeviceOut);
-        if (FAILED(hr)) {
-            _TraceCOMError(hr);
-            SAFE_RELEASE(_ptrDeviceOut);
-            return -1;
-        }
-
-        WCHAR szDeviceName[MAX_PATH];
-        const int bufferLen = sizeof(szDeviceName) / sizeof(szDeviceName)[0];
-
-        // Get the endpoint device's friendly-name
-        if (_GetDeviceName(_ptrDeviceOut, szDeviceName, bufferLen) == 0) {
-            RTC_LOG(LS_VERBOSE) << "friendly name: \"" << szDeviceName << "\"";
-        }
-
-        _usingOutputDeviceIndex = false;
-        _outputDevice = device;
-
+    int32_t CoreAudioDevice::SetPlayoutDevice(AudioDeviceModule::WindowsDeviceType device) {
+        // [PV] We don't send received audio to the speakers of the virtual machine
         return 0;
     }
 
@@ -1526,73 +1047,9 @@ namespace webrtc {
         uint16_t index,
         char name[kAdmMaxDeviceNameSize],
         char guid[kAdmMaxGuidSize]) {
-        bool defaultCommunicationDevice(false);
-        const int16_t nDevices(PlayoutDevices());  // also updates the list of devices
-
-        // Special fix for the case when the user selects '-1' as index (<=> Default
-        // Communication Device)
-        if (index == (uint16_t)(-1)) {
-            defaultCommunicationDevice = true;
-            index = 0;
-            RTC_LOG(LS_VERBOSE) << "Default Communication endpoint device will be used";
-        }
-
-        if ((index > (nDevices - 1)) || (name == NULL)) {
-            return -1;
-        }
-
-        memset(name, 0, kAdmMaxDeviceNameSize);
-
-        if (guid != NULL) {
-            memset(guid, 0, kAdmMaxGuidSize);
-        }
-
-        rtc::CritScope lock(&_critSect);
-
-        int32_t ret(-1);
-        WCHAR szDeviceName[MAX_PATH];
-        const int bufferLen = sizeof(szDeviceName) / sizeof(szDeviceName)[0];
-
-        // Get the endpoint device's friendly-name
-        if (defaultCommunicationDevice) {
-            ret = _GetDefaultDeviceName(eRender, eCommunications, szDeviceName,
-                bufferLen);
-        }
-        else {
-            ret = _GetListDeviceName(eRender, index, szDeviceName, bufferLen);
-        }
-
-        if (ret == 0) {
-            // Convert the endpoint device's friendly-name to UTF-8
-            if (WideCharToMultiByte(CP_UTF8, 0, szDeviceName, -1, name,
-                kAdmMaxDeviceNameSize, NULL, NULL) == 0) {
-                RTC_LOG(LS_ERROR)
-                    << "WideCharToMultiByte(CP_UTF8) failed with error code "
-                    << GetLastError();
-            }
-        }
-
-        // Get the endpoint ID string (uniquely identifies the device among all audio
-        // endpoint devices)
-        if (defaultCommunicationDevice) {
-            ret =
-                _GetDefaultDeviceID(eRender, eCommunications, szDeviceName, bufferLen);
-        }
-        else {
-            ret = _GetListDeviceID(eRender, index, szDeviceName, bufferLen);
-        }
-
-        if (guid != NULL && ret == 0) {
-            // Convert the endpoint device's ID string to UTF-8
-            if (WideCharToMultiByte(CP_UTF8, 0, szDeviceName, -1, guid, kAdmMaxGuidSize,
-                NULL, NULL) == 0) {
-                RTC_LOG(LS_ERROR)
-                    << "WideCharToMultiByte(CP_UTF8) failed with error code "
-                    << GetLastError();
-            }
-        }
-
-        return ret;
+        name[0] = 0;
+        guid[0] = 0;
+        return 0;
     }
 
     // ----------------------------------------------------------------------------
@@ -1615,13 +1072,13 @@ namespace webrtc {
             RTC_LOG(LS_VERBOSE) << "Default Communication endpoint device will be used";
         }
 
-        if ((index > (nDevices - 1)) || (name == NULL)) {
+        if ((index > (nDevices - 1)) || (name == nullptr)) {
             return -1;
         }
 
         memset(name, 0, kAdmMaxDeviceNameSize);
 
-        if (guid != NULL) {
+        if (guid != nullptr) {
             memset(guid, 0, kAdmMaxGuidSize);
         }
 
@@ -1633,17 +1090,16 @@ namespace webrtc {
 
         // Get the endpoint device's friendly-name
         if (defaultCommunicationDevice) {
-            ret = _GetDefaultDeviceName(eCapture, eCommunications, szDeviceName,
-                bufferLen);
+            ret = _GetDefaultDeviceName(eCommunications, szDeviceName,bufferLen);
         }
         else {
-            ret = _GetListDeviceName(eCapture, index, szDeviceName, bufferLen);
+            ret = _GetListDeviceName(index, szDeviceName, bufferLen);
         }
 
         if (ret == 0) {
             // Convert the endpoint device's friendly-name to UTF-8
             if (WideCharToMultiByte(CP_UTF8, 0, szDeviceName, -1, name,
-                kAdmMaxDeviceNameSize, NULL, NULL) == 0) {
+                kAdmMaxDeviceNameSize, nullptr, nullptr) == 0) {
                 RTC_LOG(LS_ERROR)
                     << "WideCharToMultiByte(CP_UTF8) failed with error code "
                     << GetLastError();
@@ -1654,16 +1110,16 @@ namespace webrtc {
         // endpoint devices)
         if (defaultCommunicationDevice) {
             ret =
-                _GetDefaultDeviceID(eCapture, eCommunications, szDeviceName, bufferLen);
+                _GetDefaultDeviceID(eCommunications, szDeviceName, bufferLen);
         }
         else {
-            ret = _GetListDeviceID(eCapture, index, szDeviceName, bufferLen);
+            ret = _GetListDeviceID(index, szDeviceName, bufferLen);
         }
 
-        if (guid != NULL && ret == 0) {
+        if (guid != nullptr && ret == 0) {
             // Convert the endpoint device's ID string to UTF-8
             if (WideCharToMultiByte(CP_UTF8, 0, szDeviceName, -1, guid, kAdmMaxGuidSize,
-                NULL, NULL) == 0) {
+                                    nullptr, nullptr) == 0) {
                 RTC_LOG(LS_ERROR)
                     << "WideCharToMultiByte(CP_UTF8) failed with error code "
                     << GetLastError();
@@ -1680,8 +1136,9 @@ namespace webrtc {
     int16_t CoreAudioDevice::RecordingDevices() {
         rtc::CritScope lock(&_critSect);
 
-        if (_RefreshDeviceList(eCapture) != -1) {
-            return (_DeviceListCount(eCapture));
+        // [PV] Changed to eRender for loopback
+        if (_RefreshDeviceList() != -1) {
+            return (_DeviceListCount());
         }
 
         return -1;
@@ -1710,11 +1167,11 @@ namespace webrtc {
 
         HRESULT hr(S_OK);
 
-        assert(_ptrCaptureCollection != NULL);
+        assert(_ptrLoopbackCollection != NULL);
 
         // Select an endpoint capture device given the specified index
         SAFE_RELEASE(_ptrDeviceIn);
-        hr = _ptrCaptureCollection->Item(index, &_ptrDeviceIn);
+        hr = _ptrLoopbackCollection->Item(index, &_ptrDeviceIn);
         if (FAILED(hr)) {
             _TraceCOMError(hr);
             SAFE_RELEASE(_ptrDeviceIn);
@@ -1745,19 +1202,20 @@ namespace webrtc {
             return -1;
         }
 
-        ERole role(eCommunications);
+        ERole role(eMultimedia);
 
-        if (device == AudioDeviceModule::kDefaultDevice) {
-            role = eConsole;
-        }
-        else if (device == AudioDeviceModule::kDefaultCommunicationDevice) {
-            role = eCommunications;
-        }
+        // if (device == AudioDeviceModule::kDefaultDevice) {
+        //     role = eConsole;
+        // }
+        // else if (device == AudioDeviceModule::kDefaultCommunicationDevice) {
+        //     role = eCommunications;
+        // }
 
         rtc::CritScope lock(&_critSect);
 
         // Refresh the list of capture endpoint devices
-        _RefreshDeviceList(eCapture);
+        // NOTE: [PV] Changed from eCapture to eRender for loopback
+        _RefreshDeviceList();
 
         HRESULT hr(S_OK);
 
@@ -1765,7 +1223,8 @@ namespace webrtc {
 
         //  Select an endpoint capture device given the specified role
         SAFE_RELEASE(_ptrDeviceIn);
-        hr = _ptrEnumerator->GetDefaultAudioEndpoint(eCapture, role, &_ptrDeviceIn);
+        // NOTE: [PV] Changed from eCapture to eRender for loopback
+        hr = _ptrEnumerator->GetDefaultAudioEndpoint(eRender, role, &_ptrDeviceIn);
         if (FAILED(hr)) {
             _TraceCOMError(hr);
             SAFE_RELEASE(_ptrDeviceIn);
@@ -1831,316 +1290,7 @@ namespace webrtc {
     // ----------------------------------------------------------------------------
 
     int32_t CoreAudioDevice::InitPlayout() {
-        rtc::CritScope lock(&_critSect);
-
-        if (_playing) {
-            return -1;
-        }
-
-        if (_playIsInitialized) {
-            return 0;
-        }
-
-        if (_ptrDeviceOut == NULL) {
-            return -1;
-        }
-
-        // Initialize the speaker (devices might have been added or removed)
-        if (InitSpeaker() == -1) {
-            RTC_LOG(LS_WARNING) << "InitSpeaker() failed";
-        }
-
-        // Ensure that the updated rendering endpoint device is valid
-        if (_ptrDeviceOut == NULL) {
-            return -1;
-        }
-
-        if (_builtInAecEnabled && _recIsInitialized) {
-            // Ensure the correct render device is configured in case
-            // InitRecording() was called before InitPlayout().
-            if (SetDMOProperties() == -1) {
-                return -1;
-            }
-        }
-
-        HRESULT hr = S_OK;
-        WAVEFORMATEX* pWfxOut = NULL;
-        WAVEFORMATEX Wfx = WAVEFORMATEX();
-        WAVEFORMATEX* pWfxClosestMatch = NULL;
-        UINT bufferFrameCount(0);
-
-        // Set wave format
-        Wfx.wFormatTag = WAVE_FORMAT_PCM;
-        Wfx.wBitsPerSample = 16;
-        Wfx.cbSize = 0;
-
-        REFERENCE_TIME hnsBufferDuration = 0;  // ask for minimum buffer size (default)
-
-        const int freqs[] = { 48000, 44100, 16000, 96000, 32000, 8000 };
-        // Create COM object with IAudioClient interface.
-        SAFE_RELEASE(_ptrClientOut);
-        hr = _ptrDeviceOut->Activate(__uuidof(IAudioClient), CLSCTX_ALL, NULL,
-            (void**)&_ptrClientOut);
-        EXIT_ON_ERROR(hr);
-
-        // Retrieve the stream format that the audio engine uses for its internal
-        // processing (mixing) of shared-mode streams.
-        hr = _ptrClientOut->GetMixFormat(&pWfxOut);
-        if (SUCCEEDED(hr)) {
-            RTC_LOG(LS_VERBOSE) << "Audio Engine's current rendering mix format:";
-            // format type
-            RTC_LOG(LS_VERBOSE) << "wFormatTag     : 0x"
-                << rtc::ToHex(pWfxOut->wFormatTag) << " ("
-                << pWfxOut->wFormatTag << ")";
-            // number of channels (i.e. mono, stereo...)
-            RTC_LOG(LS_VERBOSE) << "nChannels      : " << pWfxOut->nChannels;
-            // sample rate
-            RTC_LOG(LS_VERBOSE) << "nSamplesPerSec : " << pWfxOut->nSamplesPerSec;
-            // for buffer estimation
-            RTC_LOG(LS_VERBOSE) << "nAvgBytesPerSec: " << pWfxOut->nAvgBytesPerSec;
-            // block size of data
-            RTC_LOG(LS_VERBOSE) << "nBlockAlign    : " << pWfxOut->nBlockAlign;
-            // number of bits per sample of mono data
-            RTC_LOG(LS_VERBOSE) << "wBitsPerSample : " << pWfxOut->wBitsPerSample;
-            RTC_LOG(LS_VERBOSE) << "cbSize         : " << pWfxOut->cbSize;
-        }
-
-        hr = S_FALSE;
-
-        // Iterate over frequencies and channels, in order of priority
-        for (unsigned int freq = 0; freq < sizeof(freqs) / sizeof(freqs[0]); freq++) {
-            for (unsigned int chan = 0; chan < sizeof(_playChannelsPrioList) /
-                sizeof(_playChannelsPrioList[0]);
-                chan++) {
-                Wfx.nChannels = _playChannelsPrioList[chan];
-                Wfx.nSamplesPerSec = freqs[freq];
-                Wfx.nBlockAlign = Wfx.nChannels * Wfx.wBitsPerSample / 8;
-                Wfx.nAvgBytesPerSec = Wfx.nSamplesPerSec * Wfx.nBlockAlign;
-                // If the method succeeds and the audio endpoint device supports the
-                // specified stream format, it returns S_OK. If the method succeeds and
-                // provides a closest match to the specified format, it returns S_FALSE.
-                hr = _ptrClientOut->IsFormatSupported(AUDCLNT_SHAREMODE_SHARED, &Wfx,
-                    &pWfxClosestMatch);
-                if (hr == S_OK) {
-                    break;
-                }
-                else {
-                    if (pWfxClosestMatch) {
-                        RTC_LOG(INFO) << "nChannels=" << Wfx.nChannels
-                            << ", nSamplesPerSec=" << Wfx.nSamplesPerSec
-                            << " is not supported. Closest match: "
-                            << "nChannels=" << pWfxClosestMatch->nChannels
-                            << ", nSamplesPerSec="
-                            << pWfxClosestMatch->nSamplesPerSec;
-                        CoTaskMemFree(pWfxClosestMatch);
-                        pWfxClosestMatch = NULL;
-                    }
-                    else {
-                        RTC_LOG(INFO) << "nChannels=" << Wfx.nChannels
-                            << ", nSamplesPerSec=" << Wfx.nSamplesPerSec
-                            << " is not supported. No closest match.";
-                    }
-                }
-            }
-            if (hr == S_OK)
-                break;
-        }
-
-        // TODO(andrew): what happens in the event of failure in the above loop?
-        //   Is _ptrClientOut->Initialize expected to fail?
-        //   Same in InitRecording().
-        if (hr == S_OK) {
-            _playAudioFrameSize = Wfx.nBlockAlign;
-            // Block size is the number of samples each channel in 10ms.
-            _playBlockSize = Wfx.nSamplesPerSec / 100;
-            _playSampleRate = Wfx.nSamplesPerSec;
-            _devicePlaySampleRate =
-                Wfx.nSamplesPerSec;  // The device itself continues to run at 44.1 kHz.
-            _devicePlayBlockSize = Wfx.nSamplesPerSec / 100;
-            _playChannels = Wfx.nChannels;
-
-            RTC_LOG(LS_VERBOSE) << "VoE selected this rendering format:";
-            RTC_LOG(LS_VERBOSE) << "wFormatTag         : 0x"
-                << rtc::ToHex(Wfx.wFormatTag) << " (" << Wfx.wFormatTag
-                << ")";
-            RTC_LOG(LS_VERBOSE) << "nChannels          : " << Wfx.nChannels;
-            RTC_LOG(LS_VERBOSE) << "nSamplesPerSec     : " << Wfx.nSamplesPerSec;
-            RTC_LOG(LS_VERBOSE) << "nAvgBytesPerSec    : " << Wfx.nAvgBytesPerSec;
-            RTC_LOG(LS_VERBOSE) << "nBlockAlign        : " << Wfx.nBlockAlign;
-            RTC_LOG(LS_VERBOSE) << "wBitsPerSample     : " << Wfx.wBitsPerSample;
-            RTC_LOG(LS_VERBOSE) << "cbSize             : " << Wfx.cbSize;
-            RTC_LOG(LS_VERBOSE) << "Additional settings:";
-            RTC_LOG(LS_VERBOSE) << "_playAudioFrameSize: " << _playAudioFrameSize;
-            RTC_LOG(LS_VERBOSE) << "_playBlockSize     : " << _playBlockSize;
-            RTC_LOG(LS_VERBOSE) << "_playChannels      : " << _playChannels;
-        }
-
-        // Create a rendering stream.
-        //
-        // ****************************************************************************
-        // For a shared-mode stream that uses event-driven buffering, the caller must
-        // set both hnsPeriodicity and hnsBufferDuration to 0. The Initialize method
-        // determines how large a buffer to allocate based on the scheduling period
-        // of the audio engine. Although the client's buffer processing thread is
-        // event driven, the basic buffer management process, as described previously,
-        // is unaltered.
-        // Each time the thread awakens, it should call
-        // IAudioClient::GetCurrentPadding to determine how much data to write to a
-        // rendering buffer or read from a capture buffer. In contrast to the two
-        // buffers that the Initialize method allocates for an exclusive-mode stream
-        // that uses event-driven buffering, a shared-mode stream requires a single
-        // buffer.
-        // ****************************************************************************
-        //
-        if (_devicePlaySampleRate == 44100) {
-            // Ask for a larger buffer size (30ms) when using 44.1kHz as render rate.
-            // There seems to be a larger risk of underruns for 44.1 compared
-            // with the default rate (48kHz). When using default, we set the requested
-            // buffer duration to 0, which sets the buffer to the minimum size
-            // required by the engine thread. The actual buffer size can then be
-            // read by GetBufferSize() and it is 20ms on most machines.
-            hnsBufferDuration = 30 * 10000;
-        }
-        hr = _ptrClientOut->Initialize(
-            AUDCLNT_SHAREMODE_SHARED,  // share Audio Engine with other applications
-            AUDCLNT_STREAMFLAGS_EVENTCALLBACK,  // processing of the audio buffer by
-                                                // the client will be event driven
-            hnsBufferDuration,  // requested buffer capacity as a time value (in
-                                // 100-nanosecond units)
-            0,                  // periodicity
-            &Wfx,               // selected wave format
-            NULL);              // session GUID
-
-        if (FAILED(hr)) {
-            RTC_LOG(LS_ERROR) << "IAudioClient::Initialize() failed:";
-        }
-        EXIT_ON_ERROR(hr);
-
-        if (_ptrAudioBuffer) {
-            // Update the audio buffer with the selected parameters
-            _ptrAudioBuffer->SetPlayoutSampleRate(_playSampleRate);
-            _ptrAudioBuffer->SetPlayoutChannels((uint8_t)_playChannels);
-        }
-        else {
-            // We can enter this state during CoreAudioIsSupported() when no
-            // AudioDeviceImplementation has been created, hence the AudioDeviceBuffer
-            // does not exist. It is OK to end up here since we don't initiate any media
-            // in CoreAudioIsSupported().
-            RTC_LOG(LS_VERBOSE)
-                << "AudioDeviceBuffer must be attached before streaming can start";
-        }
-
-        // Get the actual size of the shared (endpoint buffer).
-        // Typical value is 960 audio frames <=> 20ms @ 48kHz sample rate.
-        hr = _ptrClientOut->GetBufferSize(&bufferFrameCount);
-        if (SUCCEEDED(hr)) {
-            RTC_LOG(LS_VERBOSE) << "IAudioClient::GetBufferSize() => "
-                << bufferFrameCount << " (<=> "
-                << bufferFrameCount * _playAudioFrameSize << " bytes)";
-        }
-
-        // Set the event handle that the system signals when an audio buffer is ready
-        // to be processed by the client.
-        hr = _ptrClientOut->SetEventHandle(_hRenderSamplesReadyEvent);
-        EXIT_ON_ERROR(hr);
-
-        // Get an IAudioRenderClient interface.
-        SAFE_RELEASE(_ptrRenderClient);
-        hr = _ptrClientOut->GetService(__uuidof(IAudioRenderClient),
-            (void**)&_ptrRenderClient);
-        EXIT_ON_ERROR(hr);
-
-        // Mark playout side as initialized
         _playIsInitialized = true;
-
-        CoTaskMemFree(pWfxOut);
-        CoTaskMemFree(pWfxClosestMatch);
-
-        RTC_LOG(LS_VERBOSE) << "render side is now initialized";
-        return 0;
-
-    Exit:
-        _TraceCOMError(hr);
-        CoTaskMemFree(pWfxOut);
-        CoTaskMemFree(pWfxClosestMatch);
-        SAFE_RELEASE(_ptrClientOut);
-        SAFE_RELEASE(_ptrRenderClient);
-        return -1;
-    }
-
-    // Capture initialization when the built-in AEC DirectX Media Object (DMO) is
-    // used. Called from InitRecording(), most of which is skipped over. The DMO
-    // handles device initialization itself.
-    // Reference: http://msdn.microsoft.com/en-us/library/ff819492(v=vs.85).aspx
-    int32_t CoreAudioDevice::InitRecordingDMO() {
-        assert(_builtInAecEnabled);
-        assert(_dmo != NULL);
-
-        if (SetDMOProperties() == -1) {
-            return -1;
-        }
-
-        DMO_MEDIA_TYPE mt = {};
-        HRESULT hr = MoInitMediaType(&mt, sizeof(WAVEFORMATEX));
-        if (FAILED(hr)) {
-            MoFreeMediaType(&mt);
-            _TraceCOMError(hr);
-            return -1;
-        }
-        mt.majortype = MEDIATYPE_Audio;
-        mt.subtype = MEDIASUBTYPE_PCM;
-        mt.formattype = FORMAT_WaveFormatEx;
-
-        // Supported formats
-        // nChannels: 1 (in AEC-only mode)
-        // nSamplesPerSec: 8000, 11025, 16000, 22050
-        // wBitsPerSample: 16
-        WAVEFORMATEX* ptrWav = reinterpret_cast<WAVEFORMATEX*>(mt.pbFormat);
-        ptrWav->wFormatTag = WAVE_FORMAT_PCM;
-        ptrWav->nChannels = 1;
-        // 16000 is the highest we can support with our resampler.
-        ptrWav->nSamplesPerSec = 16000;
-        ptrWav->nAvgBytesPerSec = 32000;
-        ptrWav->nBlockAlign = 2;
-        ptrWav->wBitsPerSample = 16;
-        ptrWav->cbSize = 0;
-
-        // Set the VoE format equal to the AEC output format.
-        _recAudioFrameSize = ptrWav->nBlockAlign;
-        _recSampleRate = ptrWav->nSamplesPerSec;
-        _recBlockSize = ptrWav->nSamplesPerSec / 100;
-        _recChannels = ptrWav->nChannels;
-
-        // Set the DMO output format parameters.
-        hr = _dmo->SetOutputType(kAecCaptureStreamIndex, &mt, 0);
-        MoFreeMediaType(&mt);
-        if (FAILED(hr)) {
-            _TraceCOMError(hr);
-            return -1;
-        }
-
-        if (_ptrAudioBuffer) {
-            _ptrAudioBuffer->SetRecordingSampleRate(_recSampleRate);
-            _ptrAudioBuffer->SetRecordingChannels(_recChannels);
-        }
-        else {
-            // Refer to InitRecording() for comments.
-            RTC_LOG(LS_VERBOSE)
-                << "AudioDeviceBuffer must be attached before streaming can start";
-        }
-
-        _mediaBuffer = new MediaBufferImpl(_recBlockSize * _recAudioFrameSize);
-
-        // Optional, but if called, must be after media types are set.
-        hr = _dmo->AllocateStreamingResources();
-        if (FAILED(hr)) {
-            _TraceCOMError(hr);
-            return -1;
-        }
-
-        _recIsInitialized = true;
-        RTC_LOG(LS_VERBOSE) << "Capture side is now initialized";
-
         return 0;
     }
 
@@ -2164,7 +1314,7 @@ namespace webrtc {
         }
         _perfCounterFactor = 10000000.0 / (double)_perfCounterFreq.QuadPart;
 
-        if (_ptrDeviceIn == NULL) {
+        if (_ptrDeviceIn == nullptr) {
             return -1;
         }
 
@@ -2174,25 +1324,20 @@ namespace webrtc {
         }
 
         // Ensure that the updated capturing endpoint device is valid
-        if (_ptrDeviceIn == NULL) {
+        if (_ptrDeviceIn == nullptr) {
             return -1;
         }
 
-        if (_builtInAecEnabled) {
-            // The DMO will configure the capture device.
-            return InitRecordingDMO();
-        }
-
         HRESULT hr = S_OK;
-        WAVEFORMATEX* pWfxIn = NULL;
+        WAVEFORMATEX* pWfxIn = nullptr;
         WAVEFORMATEXTENSIBLE Wfx = WAVEFORMATEXTENSIBLE();
-        WAVEFORMATEX* pWfxClosestMatch = NULL;
+        WAVEFORMATEX* pWfxClosestMatch = nullptr;
         UINT bufferFrameCount(0);
         const int freqs[6] = { 48000, 44100, 16000, 96000, 32000, 8000 };
 
         // Create COM object with IAudioClient interface.
         SAFE_RELEASE(_ptrClientIn);
-        hr = _ptrDeviceIn->Activate(__uuidof(IAudioClient), CLSCTX_ALL, NULL,
+        hr = _ptrDeviceIn->Activate(__uuidof(IAudioClient), CLSCTX_ALL, nullptr,
             (void**)&_ptrClientIn);
         EXIT_ON_ERROR(hr);
 
@@ -2256,7 +1401,7 @@ namespace webrtc {
                             << ", nSamplesPerSec="
                             << pWfxClosestMatch->nSamplesPerSec;
                         CoTaskMemFree(pWfxClosestMatch);
-                        pWfxClosestMatch = NULL;
+                        pWfxClosestMatch = nullptr;
                     }
                     else {
                         RTC_LOG(INFO) << "nChannels=" << Wfx.Format.nChannels
@@ -2295,14 +1440,15 @@ namespace webrtc {
         hr = _ptrClientIn->Initialize(
             AUDCLNT_SHAREMODE_SHARED,  // share Audio Engine with other applications
             AUDCLNT_STREAMFLAGS_EVENTCALLBACK |  // processing of the audio buffer by
-                                                 // the client will be event driven
-            AUDCLNT_STREAMFLAGS_NOPERSIST,   // volume and mute settings for an
+                                                 // the client will be event driven 
+            AUDCLNT_STREAMFLAGS_NOPERSIST |   // volume and mute settings for an
                                              // audio session will not persist
                                              // across system restarts
+            AUDCLNT_STREAMFLAGS_LOOPBACK,    // [PV] Enabling loopback
             0,                    // required for event-driven shared mode
             0,                    // periodicity
             (WAVEFORMATEX*)&Wfx,  // selected wave format
-            NULL);                // session GUID
+        nullptr);                // session GUID
 
         if (hr != S_OK) {
             RTC_LOG(LS_ERROR) << "IAudioClient::Initialize() failed:";
@@ -2338,9 +1484,9 @@ namespace webrtc {
         EXIT_ON_ERROR(hr);
 
         // Get an IAudioCaptureClient interface.
-        SAFE_RELEASE(_ptrCaptureClient);
+        SAFE_RELEASE(_ptrLoopbackClient);
         hr = _ptrClientIn->GetService(__uuidof(IAudioCaptureClient),
-            (void**)&_ptrCaptureClient);
+            (void**)&_ptrLoopbackClient);
         EXIT_ON_ERROR(hr);
 
         // Mark capture side as initialized
@@ -2357,7 +1503,7 @@ namespace webrtc {
         CoTaskMemFree(pWfxIn);
         CoTaskMemFree(pWfxClosestMatch);
         SAFE_RELEASE(_ptrClientIn);
-        SAFE_RELEASE(_ptrCaptureClient);
+        SAFE_RELEASE(_ptrLoopbackClient);
         return -1;
     }
 
@@ -2370,7 +1516,7 @@ namespace webrtc {
             return -1;
         }
 
-        if (_hRecThread != NULL) {
+        if (_hRecThread != nullptr) {
             return 0;
         }
 
@@ -2383,23 +1529,10 @@ namespace webrtc {
 
             // Create thread which will drive the capturing
             LPTHREAD_START_ROUTINE lpStartAddress = WSAPICaptureThread;
-            if (_builtInAecEnabled) {
-                // Redirect to the DMO polling method.
-                lpStartAddress = WSAPICaptureThreadPollDMO;
-
-                if (!_playing) {
-                    // The DMO won't provide us captured output data unless we
-                    // give it render data to process.
-                    RTC_LOG(LS_ERROR)
-                        << "Playout must be started before recording when using"
-                        << " the built-in AEC";
-                    return -1;
-                }
-            }
 
             assert(_hRecThread == NULL);
-            _hRecThread = CreateThread(NULL, 0, lpStartAddress, this, 0, NULL);
-            if (_hRecThread == NULL) {
+            _hRecThread = CreateThread(nullptr, 0, lpStartAddress, this, 0, nullptr);
+            if (_hRecThread == nullptr) {
                 RTC_LOG(LS_ERROR) << "failed to create the recording thread";
                 return -1;
             }
@@ -2434,11 +1567,11 @@ namespace webrtc {
 
         _Lock();
 
-        if (_hRecThread == NULL) {
+        if (_hRecThread == nullptr) {
             RTC_LOG(LS_VERBOSE)
                 << "no capturing stream is active => close down WASAPI only";
             SAFE_RELEASE(_ptrClientIn);
-            SAFE_RELEASE(_ptrCaptureClient);
+            SAFE_RELEASE(_ptrLoopbackClient);
             _recIsInitialized = false;
             _recording = false;
             _UnLock();
@@ -2465,7 +1598,7 @@ namespace webrtc {
         ResetEvent(_hShutdownCaptureEvent);  // Must be manually reset.
         // Ensure that the thread has released these interfaces properly.
         assert(err == -1 || _ptrClientIn == NULL);
-        assert(err == -1 || _ptrCaptureClient == NULL);
+        assert(err == -1 || _ptrLoopbackClient == NULL);
 
         _recIsInitialized = false;
         _recording = false;
@@ -2473,21 +1606,7 @@ namespace webrtc {
         // These will create thread leaks in the result of an error,
         // but we can at least resume the call.
         CloseHandle(_hRecThread);
-        _hRecThread = NULL;
-
-        if (_builtInAecEnabled) {
-            assert(_dmo != NULL);
-            // This is necessary. Otherwise the DMO can generate garbage render
-            // audio even after rendering has stopped.
-            HRESULT hr = _dmo->FreeStreamingResources();
-            if (FAILED(hr)) {
-                _TraceCOMError(hr);
-                err = -1;
-            }
-        }
-
-        // Reset the recording delay value.
-        _sndCardRecDelay = 0;
+        _hRecThread = nullptr;
 
         _UnLock();
 
@@ -2526,39 +1645,6 @@ namespace webrtc {
         if (!_playIsInitialized) {
             return -1;
         }
-
-        if (_hPlayThread != NULL) {
-            return 0;
-        }
-
-        if (_playing) {
-            return 0;
-        }
-
-        {
-            rtc::CritScope critScoped(&_critSect);
-
-            // Create thread which will drive the rendering.
-            assert(_hPlayThread == NULL);
-            _hPlayThread = CreateThread(NULL, 0, WSAPIRenderThread, this, 0, NULL);
-            if (_hPlayThread == NULL) {
-                RTC_LOG(LS_ERROR) << "failed to create the playout thread";
-                return -1;
-            }
-
-            // Set thread priority to highest possible.
-            SetThreadPriority(_hPlayThread, THREAD_PRIORITY_TIME_CRITICAL);
-        }  // critScoped
-
-        DWORD ret = WaitForSingleObject(_hRenderStartedEvent, 1000);
-        if (ret != WAIT_OBJECT_0) {
-            RTC_LOG(LS_VERBOSE) << "rendering did not start up properly";
-            return -1;
-        }
-
-        _playing = true;
-        RTC_LOG(LS_VERBOSE) << "rendering audio stream has now started...";
-
         return 0;
     }
 
@@ -2567,75 +1653,6 @@ namespace webrtc {
     // ----------------------------------------------------------------------------
 
     int32_t CoreAudioDevice::StopPlayout() {
-        if (!_playIsInitialized) {
-            return 0;
-        }
-
-        {
-            rtc::CritScope critScoped(&_critSect);
-
-            if (_hPlayThread == NULL) {
-                RTC_LOG(LS_VERBOSE)
-                    << "no rendering stream is active => close down WASAPI only";
-                SAFE_RELEASE(_ptrClientOut);
-                SAFE_RELEASE(_ptrRenderClient);
-                _playIsInitialized = false;
-                _playing = false;
-                return 0;
-            }
-
-            // stop the driving thread...
-            RTC_LOG(LS_VERBOSE)
-                << "closing down the webrtc_core_audio_render_thread...";
-            SetEvent(_hShutdownRenderEvent);
-        }  // critScoped
-
-        DWORD ret = WaitForSingleObject(_hPlayThread, 2000);
-        if (ret != WAIT_OBJECT_0) {
-            // the thread did not stop as it should
-            RTC_LOG(LS_ERROR) << "failed to close down webrtc_core_audio_render_thread";
-            CloseHandle(_hPlayThread);
-            _hPlayThread = NULL;
-            _playIsInitialized = false;
-            _playing = false;
-            return -1;
-        }
-
-        {
-            rtc::CritScope critScoped(&_critSect);
-            RTC_LOG(LS_VERBOSE) << "webrtc_core_audio_render_thread is now closed";
-
-            // to reset this event manually at each time we finish with it,
-            // in case that the render thread has exited before StopPlayout(),
-            // this event might be caught by the new render thread within same VoE
-            // instance.
-            ResetEvent(_hShutdownRenderEvent);
-
-            SAFE_RELEASE(_ptrClientOut);
-            SAFE_RELEASE(_ptrRenderClient);
-
-            _playIsInitialized = false;
-            _playing = false;
-
-            CloseHandle(_hPlayThread);
-            _hPlayThread = NULL;
-
-            if (_builtInAecEnabled && _recording) {
-                // The DMO won't provide us captured output data unless we
-                // give it render data to process.
-                //
-                // We still permit the playout to shutdown, and trace a warning.
-                // Otherwise, VoE can get into a state which will never permit
-                // playout to stop properly.
-                RTC_LOG(LS_WARNING)
-                    << "Recording should be stopped before playout when using the"
-                    << " built-in AEC";
-            }
-
-            // Reset the playout delay value.
-            _sndCardPlayDelay = 0;
-        }  // critScoped
-
         return 0;
     }
 
@@ -2644,13 +1661,13 @@ namespace webrtc {
     // ----------------------------------------------------------------------------
 
     int32_t CoreAudioDevice::PlayoutDelay(uint16_t& delayMS) const {
-        rtc::CritScope critScoped(&_critSect);
-        delayMS = static_cast<uint16_t>(_sndCardPlayDelay);
+        delayMS = 0;
         return 0;
     }
 
     bool CoreAudioDevice::BuiltInAECIsAvailable() const {
-        return _dmo != nullptr;
+        // [PV] Don't do any software AEC, this is all virtual, the mic is the speaker in the cloud
+        return true;
     }
 
     // ----------------------------------------------------------------------------
@@ -2658,20 +1675,12 @@ namespace webrtc {
     // ----------------------------------------------------------------------------
 
     bool CoreAudioDevice::Playing() const {
-        return (_playing);
+        return false;
     }
 
     // ============================================================================
     //                                 Private Methods
     // ============================================================================
-
-    // ----------------------------------------------------------------------------
-    //  [static] WSAPIRenderThread
-    // ----------------------------------------------------------------------------
-
-    DWORD WINAPI CoreAudioDevice::WSAPIRenderThread(LPVOID context) {
-        return reinterpret_cast<CoreAudioDevice*>(context)->DoRenderThread();
-    }
 
     // ----------------------------------------------------------------------------
     //  [static] WSAPICaptureThread
@@ -2681,296 +1690,8 @@ namespace webrtc {
         return reinterpret_cast<CoreAudioDevice*>(context)->DoCaptureThread();
     }
 
-    DWORD WINAPI CoreAudioDevice::WSAPICaptureThreadPollDMO(LPVOID context) {
-        return reinterpret_cast<CoreAudioDevice*>(context)
-            ->DoCaptureThreadPollDMO();
-    }
-
-    // ----------------------------------------------------------------------------
-    //  DoRenderThread
-    // ----------------------------------------------------------------------------
-
-    DWORD CoreAudioDevice::DoRenderThread() {
-        bool keepPlaying = true;
-        HANDLE waitArray[2] = { _hShutdownRenderEvent, _hRenderSamplesReadyEvent };
-        HRESULT hr = S_OK;
-        HANDLE hMmTask = NULL;
-        IAudioClock* clock = NULL;
-        REFERENCE_TIME latency;
-
-
-        // Initialize COM as MTA in this thread.
-        ScopedCOMInitializer comInit(ScopedCOMInitializer::kMTA);
-        if (!comInit.succeeded()) {
-            RTC_LOG(LS_ERROR) << "failed to initialize COM in render thread";
-            return 1;
-        }
-
-        rtc::SetCurrentThreadName("webrtc_core_audio_render_thread");
-
-        // Use Multimedia Class Scheduler Service (MMCSS) to boost the thread
-        // priority.
-        //
-        if (_winSupportAvrt) {
-            DWORD taskIndex(0);
-            hMmTask = _PAvSetMmThreadCharacteristicsA("Pro Audio", &taskIndex);
-            if (hMmTask) {
-                if (FALSE == _PAvSetMmThreadPriority(hMmTask, AVRT_PRIORITY_CRITICAL)) {
-                    RTC_LOG(LS_WARNING) << "failed to boost play-thread using MMCSS";
-                }
-                RTC_LOG(LS_VERBOSE)
-                    << "render thread is now registered with MMCSS (taskIndex="
-                    << taskIndex << ")";
-            }
-            else {
-                RTC_LOG(LS_WARNING) << "failed to enable MMCSS on render thread (err="
-                    << GetLastError() << ")";
-                _TraceCOMError(GetLastError());
-            }
-        }
-
-        _Lock();
-
-        // Get size of rendering buffer (length is expressed as the number of audio
-        // frames the buffer can hold). This value is fixed during the rendering
-        // session.
-        //
-        UINT32 bufferLength = 0;
-        REFERENCE_TIME devPeriod = 0;
-        REFERENCE_TIME devPeriodMin = 0;
-        int playout_delay;
-        double endpointBufferSizeMS;
-
-        BYTE* pData = NULL;
-
-        hr = _ptrClientOut->GetBufferSize(&bufferLength);
-        EXIT_ON_ERROR(hr);
-        RTC_LOG(LS_VERBOSE) << "[REND] size of buffer       : " << bufferLength;
-
-        // Get maximum latency for the current stream (will not change for the
-        // lifetime  of the IAudioClient object).
-        //
-        _ptrClientOut->GetStreamLatency(&latency);
-        RTC_LOG(LS_VERBOSE) << "[REND] max stream latency   : " << (DWORD)latency
-            << " (" << (double)(latency / 10000.0) << " ms)";
-
-        // Get the length of the periodic interval separating successive processing
-        // passes by the audio engine on the data in the endpoint buffer.
-        //
-        // The period between processing passes by the audio engine is fixed for a
-        // particular audio endpoint device and represents the smallest processing
-        // quantum for the audio engine. This period plus the stream latency between
-        // the buffer and endpoint device represents the minimum possible latency that
-        // an audio application can achieve. Typical value: 100000 <=> 0.01 sec =
-        // 10ms.
-        //
-
-        _ptrClientOut->GetDevicePeriod(&devPeriod, &devPeriodMin);
-        RTC_LOG(LS_VERBOSE) << "[REND] device period        : " << (DWORD)devPeriod
-            << " (" << (double)(devPeriod / 10000.0) << " ms)";
-
-        // Derive initial rendering delay.
-        // Example: 10*(960/480) + 15 = 20 + 15 = 35ms
-        //
-        playout_delay = 10 * (bufferLength / _playBlockSize) +
-            (int)((latency + devPeriod) / 10000);
-        _sndCardPlayDelay = playout_delay;
-        _writtenSamples = 0;
-        RTC_LOG(LS_VERBOSE) << "[REND] initial delay        : " << playout_delay;
-
-        endpointBufferSizeMS =
-            10.0 * ((double)bufferLength / (double)_devicePlayBlockSize);
-        RTC_LOG(LS_VERBOSE) << "[REND] endpointBufferSizeMS : "
-            << endpointBufferSizeMS;
-
-        // Before starting the stream, fill the rendering buffer with silence.
-        //
-        hr = _ptrRenderClient->GetBuffer(bufferLength, &pData);
-        EXIT_ON_ERROR(hr);
-
-        hr =
-            _ptrRenderClient->ReleaseBuffer(bufferLength, AUDCLNT_BUFFERFLAGS_SILENT);
-        EXIT_ON_ERROR(hr);
-
-        _writtenSamples += bufferLength;
-
-        hr = _ptrClientOut->GetService(__uuidof(IAudioClock), (void**)&clock);
-        if (FAILED(hr)) {
-            RTC_LOG(LS_WARNING)
-                << "failed to get IAudioClock interface from the IAudioClient";
-        }
-
-        // Start up the rendering audio stream.
-        hr = _ptrClientOut->Start();
-        EXIT_ON_ERROR(hr);
-
-        _UnLock();
-
-        // Set event which will ensure that the calling thread modifies the playing
-        // state to true.
-        //
-        SetEvent(_hRenderStartedEvent);
-
-        // >> ------------------ THREAD LOOP ------------------
-
-        while (keepPlaying) {
-            // Wait for a render notification event or a shutdown event
-            DWORD waitResult = WaitForMultipleObjects(2, waitArray, FALSE, 500);
-            switch (waitResult) {
-            case WAIT_OBJECT_0 + 0:  // _hShutdownRenderEvent
-                keepPlaying = false;
-                break;
-            case WAIT_OBJECT_0 + 1:  // _hRenderSamplesReadyEvent
-                break;
-            case WAIT_TIMEOUT:  // timeout notification
-                RTC_LOG(LS_WARNING) << "render event timed out after 0.5 seconds";
-                goto Exit;
-            default:  // unexpected error
-                RTC_LOG(LS_WARNING) << "unknown wait termination on render side";
-                goto Exit;
-            }
-
-            while (keepPlaying) {
-                _Lock();
-
-                // Sanity check to ensure that essential states are not modified
-                // during the unlocked period.
-                if (_ptrRenderClient == NULL || _ptrClientOut == NULL) {
-                    _UnLock();
-                    RTC_LOG(LS_ERROR)
-                        << "output state has been modified during unlocked period";
-                    goto Exit;
-                }
-
-                // Get the number of frames of padding (queued up to play) in the endpoint
-                // buffer.
-                UINT32 padding = 0;
-                hr = _ptrClientOut->GetCurrentPadding(&padding);
-                EXIT_ON_ERROR(hr);
-
-                // Derive the amount of available space in the output buffer
-                uint32_t framesAvailable = bufferLength - padding;
-
-                // Do we have 10 ms available in the render buffer?
-                if (framesAvailable < _playBlockSize) {
-                    // Not enough space in render buffer to store next render packet.
-                    _UnLock();
-                    break;
-                }
-
-                // Write n*10ms buffers to the render buffer
-                const uint32_t n10msBuffers = (framesAvailable / _playBlockSize);
-                for (uint32_t n = 0; n < n10msBuffers; n++) {
-                    // Get pointer (i.e., grab the buffer) to next space in the shared
-                    // render buffer.
-                    hr = _ptrRenderClient->GetBuffer(_playBlockSize, &pData);
-                    EXIT_ON_ERROR(hr);
-
-                    if (_ptrAudioBuffer) {
-                        // Request data to be played out (#bytes =
-                        // _playBlockSize*_audioFrameSize)
-                        _UnLock();
-                        int32_t nSamples =
-                            _ptrAudioBuffer->RequestPlayoutData(_playBlockSize);
-                        _Lock();
-
-                        if (nSamples == -1) {
-                            _UnLock();
-                            RTC_LOG(LS_ERROR) << "failed to read data from render client";
-                            goto Exit;
-                        }
-
-                        // Sanity check to ensure that essential states are not modified
-                        // during the unlocked period
-                        if (_ptrRenderClient == NULL || _ptrClientOut == NULL) {
-                            _UnLock();
-                            RTC_LOG(LS_ERROR)
-                                << "output state has been modified during unlocked"
-                                << " period";
-                            goto Exit;
-                        }
-                        if (nSamples != static_cast<int32_t>(_playBlockSize)) {
-                            RTC_LOG(LS_WARNING)
-                                << "nSamples(" << nSamples << ") != _playBlockSize"
-                                << _playBlockSize << ")";
-                        }
-
-                        // Get the actual (stored) data
-                        nSamples = _ptrAudioBuffer->GetPlayoutData((int8_t*)pData);
-                    }
-
-                    DWORD dwFlags(0);
-                    hr = _ptrRenderClient->ReleaseBuffer(_playBlockSize, dwFlags);
-                    // See http://msdn.microsoft.com/en-us/library/dd316605(VS.85).aspx
-                    // for more details regarding AUDCLNT_E_DEVICE_INVALIDATED.
-                    EXIT_ON_ERROR(hr);
-
-                    _writtenSamples += _playBlockSize;
-                }
-
-                // Check the current delay on the playout side.
-                if (clock) {
-                    UINT64 pos = 0;
-                    UINT64 freq = 1;
-                    clock->GetPosition(&pos, NULL);
-                    clock->GetFrequency(&freq);
-                    playout_delay = ROUND((double(_writtenSamples) / _devicePlaySampleRate -
-                        double(pos) / freq) *
-                        1000.0);
-                    _sndCardPlayDelay = playout_delay;
-                }
-
-                _UnLock();
-            }
-        }
-
-        // ------------------ THREAD LOOP ------------------ <<
-
-        SleepMs(static_cast<DWORD>(endpointBufferSizeMS + 0.5));
-        hr = _ptrClientOut->Stop();
-
-    Exit:
-        SAFE_RELEASE(clock);
-
-        if (FAILED(hr)) {
-            _ptrClientOut->Stop();
-            _UnLock();
-            _TraceCOMError(hr);
-        }
-
-        if (_winSupportAvrt) {
-            if (NULL != hMmTask) {
-                _PAvRevertMmThreadCharacteristics(hMmTask);
-            }
-        }
-
-        _Lock();
-
-        if (keepPlaying) {
-            if (_ptrClientOut != NULL) {
-                hr = _ptrClientOut->Stop();
-                if (FAILED(hr)) {
-                    _TraceCOMError(hr);
-                }
-                hr = _ptrClientOut->Reset();
-                if (FAILED(hr)) {
-                    _TraceCOMError(hr);
-                }
-            }
-            RTC_LOG(LS_ERROR)
-                << "Playout error: rendering thread has ended pre-maturely";
-        }
-        else {
-            RTC_LOG(LS_VERBOSE) << "_Rendering thread is now terminated properly";
-        }
-
-        _UnLock();
-
-        return (DWORD)hr;
-    }
-
     DWORD CoreAudioDevice::InitCaptureThreadPriority() {
-        _hMmTask = NULL;
+        _hMmTask = nullptr;
 
         rtc::SetCurrentThreadName("webrtc_core_audio_capture_thread");
 
@@ -2999,133 +1720,12 @@ namespace webrtc {
 
     void CoreAudioDevice::RevertCaptureThreadPriority() {
         if (_winSupportAvrt) {
-            if (NULL != _hMmTask) {
+            if (nullptr != _hMmTask) {
                 _PAvRevertMmThreadCharacteristics(_hMmTask);
             }
         }
 
-        _hMmTask = NULL;
-    }
-
-    DWORD CoreAudioDevice::DoCaptureThreadPollDMO() {
-        assert(_mediaBuffer != NULL);
-        bool keepRecording = true;
-
-        // Initialize COM as MTA in this thread.
-        ScopedCOMInitializer comInit(ScopedCOMInitializer::kMTA);
-        if (!comInit.succeeded()) {
-            RTC_LOG(LS_ERROR) << "failed to initialize COM in polling DMO thread";
-            return 1;
-        }
-
-        HRESULT hr = InitCaptureThreadPriority();
-        if (FAILED(hr)) {
-            return hr;
-        }
-
-        // Set event which will ensure that the calling thread modifies the
-        // recording state to true.
-        SetEvent(_hCaptureStartedEvent);
-
-        // >> ---------------------------- THREAD LOOP ----------------------------
-        while (keepRecording) {
-            // Poll the DMO every 5 ms.
-            // (The same interval used in the Wave implementation.)
-            DWORD waitResult = WaitForSingleObject(_hShutdownCaptureEvent, 5);
-            switch (waitResult) {
-            case WAIT_OBJECT_0:  // _hShutdownCaptureEvent
-                keepRecording = false;
-                break;
-            case WAIT_TIMEOUT:  // timeout notification
-                break;
-            default:  // unexpected error
-                RTC_LOG(LS_WARNING) << "Unknown wait termination on capture side";
-                hr = -1;  // To signal an error callback.
-                keepRecording = false;
-                break;
-            }
-
-            while (keepRecording) {
-                rtc::CritScope critScoped(&_critSect);
-
-                DWORD dwStatus = 0;
-                {
-                    DMO_OUTPUT_DATA_BUFFER dmoBuffer = { 0 };
-                    dmoBuffer.pBuffer = _mediaBuffer;
-                    dmoBuffer.pBuffer->AddRef();
-
-                    // Poll the DMO for AEC processed capture data. The DMO will
-                    // copy available data to |dmoBuffer|, and should only return
-                    // 10 ms frames. The value of |dwStatus| should be ignored.
-                    hr = _dmo->ProcessOutput(0, 1, &dmoBuffer, &dwStatus);
-                    SAFE_RELEASE(dmoBuffer.pBuffer);
-                    dwStatus = dmoBuffer.dwStatus;
-                }
-                if (FAILED(hr)) {
-                    _TraceCOMError(hr);
-                    keepRecording = false;
-                    assert(false);
-                    break;
-                }
-
-                ULONG bytesProduced = 0;
-                BYTE* data;
-                // Get a pointer to the data buffer. This should be valid until
-                // the next call to ProcessOutput.
-                hr = _mediaBuffer->GetBufferAndLength(&data, &bytesProduced);
-                if (FAILED(hr)) {
-                    _TraceCOMError(hr);
-                    keepRecording = false;
-                    assert(false);
-                    break;
-                }
-
-                if (bytesProduced > 0) {
-                    const int kSamplesProduced = bytesProduced / _recAudioFrameSize;
-                    // TODO(andrew): verify that this is always satisfied. It might
-                    // be that ProcessOutput will try to return more than 10 ms if
-                    // we fail to call it frequently enough.
-                    assert(kSamplesProduced == static_cast<int>(_recBlockSize));
-                    assert(sizeof(BYTE) == sizeof(int8_t));
-                    _ptrAudioBuffer->SetRecordedBuffer(reinterpret_cast<int8_t*>(data),
-                        kSamplesProduced);
-                    _ptrAudioBuffer->SetVQEData(0, 0);
-
-                    _UnLock();  // Release lock while making the callback.
-                    _ptrAudioBuffer->DeliverRecordedData();
-                    _Lock();
-                }
-
-                // Reset length to indicate buffer availability.
-                hr = _mediaBuffer->SetLength(0);
-                if (FAILED(hr)) {
-                    _TraceCOMError(hr);
-                    keepRecording = false;
-                    assert(false);
-                    break;
-                }
-
-                if (!(dwStatus & DMO_OUTPUT_DATA_BUFFERF_INCOMPLETE)) {
-                    // The DMO cannot currently produce more data. This is the
-                    // normal case; otherwise it means the DMO had more than 10 ms
-                    // of data available and ProcessOutput should be called again.
-                    break;
-                }
-            }
-        }
-        // ---------------------------- THREAD LOOP ---------------------------- <<
-
-        RevertCaptureThreadPriority();
-
-        if (FAILED(hr)) {
-            RTC_LOG(LS_ERROR)
-                << "Recording error: capturing thread has ended prematurely";
-        }
-        else {
-            RTC_LOG(LS_VERBOSE) << "Capturing thread is now terminated properly";
-        }
-
-        return hr;
+        _hMmTask = nullptr;
     }
 
     // ----------------------------------------------------------------------------
@@ -3139,7 +1739,7 @@ namespace webrtc {
 
         LARGE_INTEGER t1;
 
-        BYTE* syncBuffer = NULL;
+        BYTE* syncBuffer = nullptr;
         UINT32 syncBufIndex = 0;
 
         _readSamples = 0;
@@ -3171,7 +1771,7 @@ namespace webrtc {
         double extraDelayMS;
         double endpointBufferSizeMS;
 
-        if (_ptrClientIn == NULL) {
+        if (_ptrClientIn == nullptr) {
             RTC_LOG(LS_ERROR)
                 << "input state has been modified before capture loop starts.";
             return 1;
@@ -3186,7 +1786,7 @@ namespace webrtc {
         //
         syncBufferSize = 2 * (bufferLength * _recAudioFrameSize);
         syncBuffer = new BYTE[syncBufferSize];
-        if (syncBuffer == NULL) {
+        if (syncBuffer == nullptr) {
             return (DWORD)E_POINTER;
         }
         RTC_LOG(LS_VERBOSE) << "[CAPT] size of sync buffer  : " << syncBufferSize
@@ -3230,7 +1830,8 @@ namespace webrtc {
 
         while (keepRecording) {
             // Wait for a capture notification event or a shutdown event
-            DWORD waitResult = WaitForMultipleObjects(2, waitArray, FALSE, 500);
+            // [PV] WASAPI loopback will not output an event, so we poll instead
+            DWORD waitResult = WaitForMultipleObjects(2, waitArray, FALSE, 5);
             switch (waitResult) {
             case WAIT_OBJECT_0 + 0:  // _hShutdownCaptureEvent
                 keepRecording = false;
@@ -3238,15 +1839,16 @@ namespace webrtc {
             case WAIT_OBJECT_0 + 1:  // _hCaptureSamplesReadyEvent
                 break;
             case WAIT_TIMEOUT:  // timeout notification
-                RTC_LOG(LS_WARNING) << "capture event timed out after 0.5 seconds";
-                goto Exit;
+                break;
+                //RTC_LOG(LS_WARNING) << "capture event timed out after 0.5 seconds";
+                //goto Exit;
             default:  // unexpected error
                 RTC_LOG(LS_WARNING) << "unknown wait termination on capture side";
                 goto Exit;
             }
 
             while (keepRecording) {
-                BYTE* pData = 0;
+                BYTE* pData = nullptr;
                 UINT32 framesAvailable = 0;
                 DWORD flags = 0;
                 UINT64 recTime = 0;
@@ -3256,7 +1858,7 @@ namespace webrtc {
 
                 // Sanity check to ensure that essential states are not modified
                 // during the unlocked period.
-                if (_ptrCaptureClient == NULL || _ptrClientIn == NULL) {
+                if (_ptrLoopbackClient == nullptr || _ptrClientIn == nullptr) {
                     _UnLock();
                     RTC_LOG(LS_ERROR)
                         << "input state has been modified during unlocked period";
@@ -3265,7 +1867,7 @@ namespace webrtc {
 
                 //  Find out how much capture data is available
                 //
-                hr = _ptrCaptureClient->GetBuffer(
+                hr = _ptrLoopbackClient->GetBuffer(
                     &pData,            // packet which is ready to be read by used
                     &framesAvailable,  // #frames in the captured packet (can be zero)
                     &flags,            // support flags (check)
@@ -3284,8 +1886,8 @@ namespace webrtc {
                     if (flags & AUDCLNT_BUFFERFLAGS_SILENT) {
                         // Treat all of the data in the packet as silence and ignore the
                         // actual data values.
-                        RTC_LOG(LS_WARNING) << "AUDCLNT_BUFFERFLAGS_SILENT";
-                        pData = NULL;
+                        // RTC_LOG(LS_WARNING) << "AUDCLNT_BUFFERFLAGS_SILENT";
+                        pData = nullptr;
                     }
 
                     assert(framesAvailable != 0);
@@ -3303,7 +1905,7 @@ namespace webrtc {
 
                     // Release the capture buffer
                     //
-                    hr = _ptrCaptureClient->ReleaseBuffer(framesAvailable);
+                    hr = _ptrLoopbackClient->ReleaseBuffer(framesAvailable);
                     EXIT_ON_ERROR(hr);
 
                     _readSamples += framesAvailable;
@@ -3311,12 +1913,12 @@ namespace webrtc {
 
                     QueryPerformanceCounter(&t1);
 
-                    // Get the current recording and playout delay.
+                    // // Get the current recording and playout delay.
                     uint32_t sndCardRecDelay = (uint32_t)(
                         ((((UINT64)t1.QuadPart * _perfCounterFactor) - recTime) / 10000) +
                         (10 * syncBufIndex) / _recBlockSize - 10);
-                    uint32_t sndCardPlayDelay = static_cast<uint32_t>(_sndCardPlayDelay);
-
+                    uint32_t sndCardPlayDelay = 0; //  static_cast<uint32_t>(_sndCardPlayDelay);
+                    //
                     _sndCardRecDelay = sndCardRecDelay;
 
                     while (syncBufIndex >= _recBlockSize) {
@@ -3333,7 +1935,7 @@ namespace webrtc {
 
                             // Sanity check to ensure that essential states are not modified
                             // during the unlocked period
-                            if (_ptrCaptureClient == NULL || _ptrClientIn == NULL) {
+                            if (_ptrLoopbackClient == nullptr || _ptrClientIn == nullptr) {
                                 _UnLock();
                                 RTC_LOG(LS_ERROR) << "input state has been modified during"
                                     << " unlocked period";
@@ -3385,7 +1987,7 @@ namespace webrtc {
         _Lock();
 
         if (keepRecording) {
-            if (_ptrClientIn != NULL) {
+            if (_ptrClientIn != nullptr) {
                 hr = _ptrClientIn->Stop();
                 if (FAILED(hr)) {
                     _TraceCOMError(hr);
@@ -3404,7 +2006,7 @@ namespace webrtc {
         }
 
         SAFE_RELEASE(_ptrClientIn);
-        SAFE_RELEASE(_ptrCaptureClient);
+        SAFE_RELEASE(_ptrLoopbackClient);
 
         _UnLock();
 
@@ -3421,14 +2023,6 @@ namespace webrtc {
                 << "Attempt to set Windows AEC with recording already initialized";
             return -1;
         }
-
-        if (_dmo == NULL) {
-            RTC_LOG(LS_ERROR)
-                << "Built-in AEC DMO was not initialized properly at create time";
-            return -1;
-        }
-
-        _builtInAecEnabled = enable;
         return 0;
     }
 
@@ -3438,102 +2032,6 @@ namespace webrtc {
 
     void CoreAudioDevice::_UnLock() RTC_NO_THREAD_SAFETY_ANALYSIS {
         _critSect.Leave();
-    }
-
-    int CoreAudioDevice::SetDMOProperties() {
-        HRESULT hr = S_OK;
-        assert(_dmo != NULL);
-
-        rtc::scoped_refptr<IPropertyStore> ps;
-        {
-            IPropertyStore* ptrPS = NULL;
-            hr = _dmo->QueryInterface(IID_IPropertyStore,
-                reinterpret_cast<void**>(&ptrPS));
-            if (FAILED(hr) || ptrPS == NULL) {
-                _TraceCOMError(hr);
-                return -1;
-            }
-            ps = ptrPS;
-            SAFE_RELEASE(ptrPS);
-        }
-
-        // Set the AEC system mode.
-        // SINGLE_CHANNEL_AEC - AEC processing only.
-        if (SetVtI4Property(ps, MFPKEY_WMAAECMA_SYSTEM_MODE, SINGLE_CHANNEL_AEC)) {
-            return -1;
-        }
-
-        // Set the AEC source mode.
-        // VARIANT_TRUE - Source mode (we poll the AEC for captured data).
-        if (SetBoolProperty(ps, MFPKEY_WMAAECMA_DMO_SOURCE_MODE, VARIANT_TRUE) ==
-            -1) {
-            return -1;
-        }
-
-        // Enable the feature mode.
-        // This lets us override all the default processing settings below.
-        if (SetBoolProperty(ps, MFPKEY_WMAAECMA_FEATURE_MODE, VARIANT_TRUE) == -1) {
-            return -1;
-        }
-
-        // Disable analog AGC (default enabled).
-        if (SetBoolProperty(ps, MFPKEY_WMAAECMA_MIC_GAIN_BOUNDER, VARIANT_FALSE) ==
-            -1) {
-            return -1;
-        }
-
-        // Disable noise suppression (default enabled).
-        // 0 - Disabled, 1 - Enabled
-        if (SetVtI4Property(ps, MFPKEY_WMAAECMA_FEATR_NS, 0) == -1) {
-            return -1;
-        }
-
-        // Relevant parameters to leave at default settings:
-        // MFPKEY_WMAAECMA_FEATR_AGC - Digital AGC (disabled).
-        // MFPKEY_WMAAECMA_FEATR_CENTER_CLIP - AEC center clipping (enabled).
-        // MFPKEY_WMAAECMA_FEATR_ECHO_LENGTH - Filter length (256 ms).
-        //   TODO(andrew): investigate decresing the length to 128 ms.
-        // MFPKEY_WMAAECMA_FEATR_FRAME_SIZE - Frame size (0).
-        //   0 is automatic; defaults to 160 samples (or 10 ms frames at the
-        //   selected 16 kHz) as long as mic array processing is disabled.
-        // MFPKEY_WMAAECMA_FEATR_NOISE_FILL - Comfort noise (enabled).
-        // MFPKEY_WMAAECMA_FEATR_VAD - VAD (disabled).
-
-        // Set the devices selected by VoE. If using a default device, we need to
-        // search for the device index.
-        int inDevIndex = _inputDeviceIndex;
-        int outDevIndex = _outputDeviceIndex;
-        if (!_usingInputDeviceIndex) {
-            ERole role = eCommunications;
-            if (_inputDevice == AudioDeviceModule::kDefaultDevice) {
-                role = eConsole;
-            }
-
-            if (_GetDefaultDeviceIndex(eCapture, role, &inDevIndex) == -1) {
-                return -1;
-            }
-        }
-
-        if (!_usingOutputDeviceIndex) {
-            ERole role = eCommunications;
-            if (_outputDevice == AudioDeviceModule::kDefaultDevice) {
-                role = eConsole;
-            }
-
-            if (_GetDefaultDeviceIndex(eRender, role, &outDevIndex) == -1) {
-                return -1;
-            }
-        }
-
-        DWORD devIndex = static_cast<uint32_t>(outDevIndex << 16) +
-            static_cast<uint32_t>(0x0000ffff & inDevIndex);
-        RTC_LOG(LS_VERBOSE) << "Capture device index: " << inDevIndex
-            << ", render device index: " << outDevIndex;
-        if (SetVtI4Property(ps, MFPKEY_WMAAECMA_DEVICE_INDEXES, devIndex) == -1) {
-            return -1;
-        }
-
-        return 0;
     }
 
     int CoreAudioDevice::SetBoolProperty(IPropertyStore* ptrPS,
@@ -3576,17 +2074,16 @@ namespace webrtc {
     //  such devices.
     // ----------------------------------------------------------------------------
 
-    int32_t CoreAudioDevice::_RefreshDeviceList(EDataFlow dir) {
+    int32_t CoreAudioDevice::_RefreshDeviceList() {
         RTC_LOG(LS_VERBOSE) << __FUNCTION__;
 
         HRESULT hr = S_OK;
-        IMMDeviceCollection* pCollection = NULL;
+        IMMDeviceCollection* pCollection = nullptr;
 
-        assert(dir == eRender || dir == eCapture);
         assert(_ptrEnumerator != NULL);
 
         // Create a fresh list of devices using the specified direction
-        hr = _ptrEnumerator->EnumAudioEndpoints(dir, DEVICE_STATE_ACTIVE,
+        hr = _ptrEnumerator->EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE,
             &pCollection);
         if (FAILED(hr)) {
             _TraceCOMError(hr);
@@ -3594,14 +2091,8 @@ namespace webrtc {
             return -1;
         }
 
-        if (dir == eRender) {
-            SAFE_RELEASE(_ptrRenderCollection);
-            _ptrRenderCollection = pCollection;
-        }
-        else {
-            SAFE_RELEASE(_ptrCaptureCollection);
-            _ptrCaptureCollection = pCollection;
-        }
+        SAFE_RELEASE(_ptrLoopbackCollection);
+        _ptrLoopbackCollection = pCollection;
 
         return 0;
     }
@@ -3613,19 +2104,13 @@ namespace webrtc {
     //  current list of such devices.
     // ----------------------------------------------------------------------------
 
-    int16_t CoreAudioDevice::_DeviceListCount(EDataFlow dir) {
+    int16_t CoreAudioDevice::_DeviceListCount() {
         RTC_LOG(LS_VERBOSE) << __FUNCTION__;
 
         HRESULT hr = S_OK;
         UINT count = 0;
-
-        assert(eRender == dir || eCapture == dir);
-
-        if (eRender == dir && NULL != _ptrRenderCollection) {
-            hr = _ptrRenderCollection->GetCount(&count);
-        }
-        else if (NULL != _ptrCaptureCollection) {
-            hr = _ptrCaptureCollection->GetCount(&count);
+        if (nullptr != _ptrLoopbackCollection) {
+            hr = _ptrLoopbackCollection->GetCount(&count);
         }
 
         if (FAILED(hr)) {
@@ -3647,22 +2132,17 @@ namespace webrtc {
     //  in _RefreshDeviceList().
     // ----------------------------------------------------------------------------
 
-    int32_t CoreAudioDevice::_GetListDeviceName(EDataFlow dir,
+    int32_t CoreAudioDevice::_GetListDeviceName(
         int index,
         LPWSTR szBuffer,
         int bufferLen) {
         RTC_LOG(LS_VERBOSE) << __FUNCTION__;
 
         HRESULT hr = S_OK;
-        IMMDevice* pDevice = NULL;
+        IMMDevice* pDevice = nullptr;
 
-        assert(dir == eRender || dir == eCapture);
-
-        if (eRender == dir && NULL != _ptrRenderCollection) {
-            hr = _ptrRenderCollection->Item(index, &pDevice);
-        }
-        else if (NULL != _ptrCaptureCollection) {
-            hr = _ptrCaptureCollection->Item(index, &pDevice);
+        if (nullptr != _ptrLoopbackCollection) {
+            hr = _ptrLoopbackCollection->Item(index, &pDevice);
         }
 
         if (FAILED(hr)) {
@@ -3685,20 +2165,19 @@ namespace webrtc {
     //  Uses: _ptrEnumerator
     // ----------------------------------------------------------------------------
 
-    int32_t CoreAudioDevice::_GetDefaultDeviceName(EDataFlow dir,
+    int32_t CoreAudioDevice::_GetDefaultDeviceName(
         ERole role,
         LPWSTR szBuffer,
         int bufferLen) {
         RTC_LOG(LS_VERBOSE) << __FUNCTION__;
 
         HRESULT hr = S_OK;
-        IMMDevice* pDevice = NULL;
+        IMMDevice* pDevice = nullptr;
 
-        assert(dir == eRender || dir == eCapture);
         assert(role == eConsole || role == eCommunications);
         assert(_ptrEnumerator != NULL);
 
-        hr = _ptrEnumerator->GetDefaultAudioEndpoint(dir, role, &pDevice);
+        hr = _ptrEnumerator->GetDefaultAudioEndpoint(eRender, role, &pDevice);
 
         if (FAILED(hr)) {
             _TraceCOMError(hr);
@@ -3722,22 +2201,17 @@ namespace webrtc {
     //  in _RefreshDeviceList().
     // ----------------------------------------------------------------------------
 
-    int32_t CoreAudioDevice::_GetListDeviceID(EDataFlow dir,
+    int32_t CoreAudioDevice::_GetListDeviceID(
         int index,
         LPWSTR szBuffer,
         int bufferLen) {
         RTC_LOG(LS_VERBOSE) << __FUNCTION__;
 
         HRESULT hr = S_OK;
-        IMMDevice* pDevice = NULL;
+        IMMDevice* pDevice = nullptr;
 
-        assert(dir == eRender || dir == eCapture);
-
-        if (eRender == dir && NULL != _ptrRenderCollection) {
-            hr = _ptrRenderCollection->Item(index, &pDevice);
-        }
-        else if (NULL != _ptrCaptureCollection) {
-            hr = _ptrCaptureCollection->Item(index, &pDevice);
+        if (nullptr != _ptrLoopbackCollection) {
+            hr = _ptrLoopbackCollection->Item(index, &pDevice);
         }
 
         if (FAILED(hr)) {
@@ -3760,20 +2234,19 @@ namespace webrtc {
     //  Uses: _ptrEnumerator
     // ----------------------------------------------------------------------------
 
-    int32_t CoreAudioDevice::_GetDefaultDeviceID(EDataFlow dir,
+    int32_t CoreAudioDevice::_GetDefaultDeviceID(
         ERole role,
         LPWSTR szBuffer,
         int bufferLen) {
         RTC_LOG(LS_VERBOSE) << __FUNCTION__;
 
         HRESULT hr = S_OK;
-        IMMDevice* pDevice = NULL;
+        IMMDevice* pDevice = nullptr;
 
-        assert(dir == eRender || dir == eCapture);
         assert(role == eConsole || role == eCommunications);
         assert(_ptrEnumerator != NULL);
 
-        hr = _ptrEnumerator->GetDefaultAudioEndpoint(dir, role, &pDevice);
+        hr = _ptrEnumerator->GetDefaultAudioEndpoint(eRender, role, &pDevice);
 
         if (FAILED(hr)) {
             _TraceCOMError(hr);
@@ -3786,7 +2259,7 @@ namespace webrtc {
         return res;
     }
 
-    int32_t CoreAudioDevice::_GetDefaultDeviceIndex(EDataFlow dir,
+    int32_t CoreAudioDevice::_GetDefaultDeviceIndex(
         ERole role,
         int* index) {
         RTC_LOG(LS_VERBOSE) << __FUNCTION__;
@@ -3799,15 +2272,12 @@ namespace webrtc {
         assert(kDeviceIDLength ==
             sizeof(szDefaultDeviceID) / sizeof(szDefaultDeviceID[0]));
 
-        if (_GetDefaultDeviceID(dir, role, szDefaultDeviceID, kDeviceIDLength) ==
+        if (_GetDefaultDeviceID(role, szDefaultDeviceID, kDeviceIDLength) ==
             -1) {
             return -1;
         }
 
-        IMMDeviceCollection* collection = _ptrCaptureCollection;
-        if (dir == eRender) {
-            collection = _ptrRenderCollection;
-        }
+        IMMDeviceCollection* collection = _ptrLoopbackCollection;
 
         if (!collection) {
             RTC_LOG(LS_ERROR) << "Device collection not valid";
@@ -3826,9 +2296,9 @@ namespace webrtc {
             memset(szDeviceID, 0, sizeof(szDeviceID));
             rtc::scoped_refptr<IMMDevice> device;
             {
-                IMMDevice* ptrDevice = NULL;
+                IMMDevice* ptrDevice = nullptr;
                 hr = collection->Item(i, &ptrDevice);
-                if (FAILED(hr) || ptrDevice == NULL) {
+                if (FAILED(hr) || ptrDevice == nullptr) {
                     _TraceCOMError(hr);
                     return -1;
                 }
@@ -3867,13 +2337,13 @@ namespace webrtc {
         static const WCHAR szDefault[] = L"<Device not available>";
 
         HRESULT hr = E_FAIL;
-        IPropertyStore* pProps = NULL;
+        IPropertyStore* pProps = nullptr;
         PROPVARIANT varName;
 
         assert(pszBuffer != NULL);
         assert(bufferLen > 0);
 
-        if (pDevice != NULL) {
+        if (pDevice != nullptr) {
             hr = pDevice->OpenPropertyStore(STGM_READ, &pProps);
             if (FAILED(hr)) {
                 RTC_LOG(LS_ERROR) << "IMMDevice::OpenPropertyStore failed, hr = 0x"
@@ -3906,7 +2376,7 @@ namespace webrtc {
                 << " type, hr = 0x" << rtc::ToHex(hr);
         }
 
-        if (SUCCEEDED(hr) && (varName.pwszVal != NULL)) {
+        if (SUCCEEDED(hr) && (varName.pwszVal != nullptr)) {
             // Copy the valid device name to the provided ouput buffer.
             wcsncpy_s(pszBuffer, bufferLen, varName.pwszVal, _TRUNCATE);
         }
@@ -3933,12 +2403,12 @@ namespace webrtc {
         static const WCHAR szDefault[] = L"<Device not available>";
 
         HRESULT hr = E_FAIL;
-        LPWSTR pwszID = NULL;
+        LPWSTR pwszID = nullptr;
 
         assert(pszBuffer != NULL);
         assert(bufferLen > 0);
 
-        if (pDevice != NULL) {
+        if (pDevice != nullptr) {
             hr = pDevice->GetId(&pwszID);
         }
 
@@ -3959,7 +2429,7 @@ namespace webrtc {
     //  _GetDefaultDevice
     // ----------------------------------------------------------------------------
 
-    int32_t CoreAudioDevice::_GetDefaultDevice(EDataFlow dir,
+    int32_t CoreAudioDevice::_GetDefaultDevice(
         ERole role,
         IMMDevice** ppDevice) {
         RTC_LOG(LS_VERBOSE) << __FUNCTION__;
@@ -3968,7 +2438,7 @@ namespace webrtc {
 
         assert(_ptrEnumerator != NULL);
 
-        hr = _ptrEnumerator->GetDefaultAudioEndpoint(dir, role, ppDevice);
+        hr = _ptrEnumerator->GetDefaultAudioEndpoint(eRender, role, ppDevice);
         if (FAILED(hr)) {
             _TraceCOMError(hr);
             return -1;
@@ -3981,17 +2451,17 @@ namespace webrtc {
     //  _GetListDevice
     // ----------------------------------------------------------------------------
 
-    int32_t CoreAudioDevice::_GetListDevice(EDataFlow dir,
+    int32_t CoreAudioDevice::_GetListDevice(
         int index,
         IMMDevice** ppDevice) {
         HRESULT hr(S_OK);
 
         assert(_ptrEnumerator != NULL);
 
-        IMMDeviceCollection* pCollection = NULL;
+        IMMDeviceCollection* pCollection = nullptr;
 
         hr = _ptrEnumerator->EnumAudioEndpoints(
-            dir,
+            eRender,
             DEVICE_STATE_ACTIVE,  // only active endpoints are OK
             &pCollection);
         if (FAILED(hr)) {
@@ -4014,18 +2484,17 @@ namespace webrtc {
     //  _EnumerateEndpointDevicesAll
     // ----------------------------------------------------------------------------
 
-    int32_t CoreAudioDevice::_EnumerateEndpointDevicesAll(
-        EDataFlow dataFlow) const {
+    int32_t CoreAudioDevice::_EnumerateEndpointDevicesAll() const {
         RTC_LOG(LS_VERBOSE) << __FUNCTION__;
 
         assert(_ptrEnumerator != NULL);
 
         HRESULT hr = S_OK;
-        IMMDeviceCollection* pCollection = NULL;
-        IMMDevice* pEndpoint = NULL;
-        IPropertyStore* pProps = NULL;
-        IAudioEndpointVolume* pEndpointVolume = NULL;
-        LPWSTR pwszID = NULL;
+        IMMDeviceCollection* pCollection = nullptr;
+        IMMDevice* pEndpoint = nullptr;
+        IPropertyStore* pProps = nullptr;
+        IAudioEndpointVolume* pEndpointVolume = nullptr;
+        LPWSTR pwszID = nullptr;
         UINT count = 0;
 
 
@@ -4033,7 +2502,7 @@ namespace webrtc {
         // Get states for *all* endpoint devices.
         // Output: IMMDeviceCollection interface.
         hr = _ptrEnumerator->EnumAudioEndpoints(
-            dataFlow,  // data-flow direction (input parameter)
+            eRender,  // data-flow direction (input parameter)
             DEVICE_STATE_ACTIVE | DEVICE_STATE_DISABLED | DEVICE_STATE_UNPLUGGED,
             &pCollection);  // release interface when done
 
@@ -4044,12 +2513,7 @@ namespace webrtc {
         // Retrieve a count of the devices in the device collection.
         hr = pCollection->GetCount(&count);
         EXIT_ON_ERROR(hr);
-        if (dataFlow == eRender)
-            RTC_LOG(LS_VERBOSE) << "#rendering endpoint devices (counting all): "
-            << count;
-        else if (dataFlow == eCapture)
-            RTC_LOG(LS_VERBOSE) << "#capturing endpoint devices (counting all): "
-            << count;
+        RTC_LOG(LS_VERBOSE) << "#loopback endpoint devices (counting all): " << count;
 
         if (count == 0) {
             return 0;
@@ -4112,7 +2576,7 @@ namespace webrtc {
                 << ")  : UNPLUGGED";
 
             // Check the hardware volume capabilities.
-            hr = pEndpoint->Activate(__uuidof(IAudioEndpointVolume), CLSCTX_ALL, NULL,
+            hr = pEndpoint->Activate(__uuidof(IAudioEndpointVolume), CLSCTX_ALL, nullptr,
                 (void**)&pEndpointVolume);
             CONTINUE_ON_ERROR(hr);
             hr = pEndpointVolume->QueryHardwareSupport(&dwHwSupportMask);
@@ -4174,7 +2638,7 @@ namespace webrtc {
                 RTC_LOG(LS_VERBOSE) << "Error when logging device information";
             }
             CoTaskMemFree(pwszID);
-            pwszID = NULL;
+            pwszID = nullptr;
             PropVariantClear(&varName);
             SAFE_RELEASE(pProps);
             SAFE_RELEASE(pEndpoint);
@@ -4186,7 +2650,7 @@ namespace webrtc {
     Exit:
         _TraceCOMError(hr);
         CoTaskMemFree(pwszID);
-        pwszID = NULL;
+        pwszID = nullptr;
         SAFE_RELEASE(pCollection);
         SAFE_RELEASE(pEndpoint);
         SAFE_RELEASE(pEndpointVolume);
@@ -4208,8 +2672,8 @@ namespace webrtc {
 
         // Gets the system's human readable message string for this HRESULT.
         // All error message in English by default.
-        DWORD messageLength = ::FormatMessageW(dwFlags, 0, hr, dwLangID, errorText,
-            MAXERRORLENGTH, NULL);
+        DWORD messageLength = ::FormatMessageW(dwFlags, nullptr, hr, dwLangID, errorText,
+            MAXERRORLENGTH, nullptr);
 
         assert(messageLength <= MAXERRORLENGTH);
 
@@ -4235,10 +2699,10 @@ namespace webrtc {
         memset(_str, 0, kStrLen);
         // Get required size (in bytes) to be able to complete the conversion.
         unsigned int required_size =
-            (unsigned int)WideCharToMultiByte(CP_UTF8, 0, src, -1, _str, 0, 0, 0);
+            (unsigned int)WideCharToMultiByte(CP_UTF8, 0, src, -1, _str, 0, nullptr, nullptr);
         if (required_size <= kStrLen) {
             // Process the entire input string, including the terminating null char.
-            if (WideCharToMultiByte(CP_UTF8, 0, src, -1, _str, kStrLen, 0, 0) == 0)
+            if (WideCharToMultiByte(CP_UTF8, 0, src, -1, _str, kStrLen, nullptr, nullptr) == 0)
                 memset(_str, 0, kStrLen);
         }
         return _str;

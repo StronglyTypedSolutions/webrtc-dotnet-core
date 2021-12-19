@@ -15,7 +15,7 @@
 #include "NvEncFacadeD3D11.h"
 #include <algorithm>
 
-#define SHOW_ENCODING_DURATION
+#undef SHOW_ENCODING_DURATION
 
 using Microsoft::WRL::ComPtr;
 
